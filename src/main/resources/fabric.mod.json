@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "id": "gpucpu_util",
+  "version": "1.21.11",
+  "name": "GpuCpu Util",
+  "description": "On-screen CPU/GPU usage with Mod Menu settings.",
+  "authors": ["cutebow"],
+  "contributors": ["Logawinner"],
+  "license": "MIT",
+  "environment": "*",
+  "icon": "assets/icon.png",
+  "entrypoints": {
+    "client": ["me.anchorhelper.gpucpu_util.Gpucpu_util"],
+    "modmenu": ["me.anchorhelper.gpucpu_util.ModMenuIntegration"]
+  },
+  "depends": {
+    "fabricloader": ">=0.18.1",
+    "minecraft": "1.21.11",
+    "fabric-api": ">=0.139.4+1.21.11",
+    "cloth-config2": ">=21.11.151",
+    "modmenu": ">=17.0.0-beta.1"
+  },
+  "custom": {
+    "modmenu": {
+      "links": {
+        "modmenu.modrinth": "https://modrinth.com/user/cutebow",
+        "modmenu.discord": "https://discord.gg/A2Nx9kxDeB"
+      }
+    }
+  }
+}

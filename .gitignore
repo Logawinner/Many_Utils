@@ -1,0 +1,24 @@
+# Build artifacts
+.gradle/
+build/
+out/
+
+# Compiled classes
+*.class
+
+# IDE files
+.idea/
+.vscode/
+
+# Large files that shouldn't be committed
+*.hprof
+*.log
+*.jar
+
+# Local config (user-specific)
+gradle.properties
+gradle/wrapper/gradle-wrapper.properties
+
+# Gradle wrapper scripts (can be regenerated)
+gradlew
+gradlew.bat

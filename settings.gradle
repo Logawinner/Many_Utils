@@ -1,0 +1,17 @@
+pluginManagement {
+    repositories {
+        maven { url = "https://maven.fabricmc.net/" }
+        maven { url = "https://maven.fabricmc.net/snapshots/" }
+        gradlePluginPortal()
+        mavenCentral()
+    }
+}
+dependencyResolutionManagement {
+    repositories {
+        maven { url = "https://maven.fabricmc.net/" }
+        maven { url = "https://maven.fabricmc.net/snapshots/" }
+        mavenCentral()
+    }
+}
+rootProject.name = "gpcpu-util"
+include(":")
