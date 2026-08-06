@@ -39,7 +39,7 @@ dependencies {
 sourceSets {
     main {
         java {
-            srcDirs = ['gpucpu_util']
+            srcDirs = ['mc_utils']
         }
         resources {
             srcDirs = ['src/main/resources']
@@ -49,5 +49,5 @@ sourceSets {
 
 // Set archive base name
 base {
-    archivesName = project.name
+    archivesName = 'Minecraft_Utils'
 }

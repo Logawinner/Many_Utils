@@ -1,4 +1,4 @@
-package me.anchorhelper.gpucpu_util;
+package me.anchorhelper.mc_utils;
 
 import com.sun.management.OperatingSystemMXBean;
 import java.io.BufferedReader;
@@ -12,11 +12,12 @@ import java.util.Locale;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import net.minecraft.client.MinecraftClient;
 
 public class Metrics {
     private static final OperatingSystemMXBean OS = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
     private static final ScheduledExecutorService EXEC = Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread t = new Thread(r, "GpuCpu-Sampler");
+        Thread t = new Thread(r, "MinecraftUtils-Sampler");
         t.setDaemon(true);
         return t;
     });
@@ -38,6 +39,39 @@ public class Metrics {
     private static volatile boolean nvsmiChecked = false;
     private static volatile boolean nvsmiAvailable = false;
 
+    private static volatile long ramTotal = Runtime.getRuntime().maxMemory();
+    private static volatile long ramUsed = Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+    private static volatile long vramTotal = 0;
+    private static volatile long vramUsed = 0;
+
+    private static volatile int ping = -1;
+    private static volatile double x = 0;
+    private static volatile double y = 0;
+    private static volatile double z = 0;
+    private static volatile String biome = "";
+    private static volatile int chunkX = 0;
+    private static volatile int chunkZ = 0;
+    private static volatile int entityCount = 0;
+    private static volatile float direction = 0f;
+    private static volatile int lightLevel = 0;
+    private static volatile long inGameDay = 0;
+    private static volatile long worldAge = 0;
+
+    private static volatile long irlTime = System.currentTimeMillis();
+    private static volatile long gameTime = 0;
+
+    private static volatile float fps1Min = 0;
+    private static volatile float fps5Min = 0;
+    private static volatile float fps15Min = 0;
+    private static final java.util.Queue<Long> fpsSamples = new java.util.ArrayDeque<>();
+    private static final Object FPS_LOCK = new Object();
+    private static long lastFpsTime = System.nanoTime();
+    private static int frameCount = 0;
+
+    private static volatile double tps = 20.0;
+    private static long lastGameTime = 0;
+    private static long lastTpsSampleTime = System.nanoTime();
+
     public static void start() {
         if (started) return;
         started = true;
@@ -45,6 +79,10 @@ public class Metrics {
         EXEC.scheduleAtFixedRate(() -> {
             sampleCpu();
             sampleGpu();
+            sampleMemory();
+            sampleTime();
+            samplePingAndCoords();
+            sampleFps();
         }, 0, 1, TimeUnit.SECONDS);
     }
 
@@ -164,7 +202,7 @@ public class Metrics {
         if (nvmlChecked) return;
         nvmlChecked = true;
         try {
-            nvmlClass = Class.forName("me.anchorhelper.gpucpu_util.Nvml");
+            nvmlClass = Class.forName("me.anchorhelper.mc_utils.Nvml");
             Method avail = null, init = null;
             try { avail = nvmlClass.getMethod("available"); } catch (Throwable t) {}
             try { init = nvmlClass.getMethod("init"); } catch (Throwable t) {}
@@ -285,4 +323,206 @@ public class Metrics {
         } catch (Throwable ignored) {}
         return null;
     }
+
+    private static void sampleMemory() {
+        try {
+            Runtime rt = Runtime.getRuntime();
+            ramUsed = rt.totalMemory() - rt.freeMemory();
+            ramTotal = rt.maxMemory();
+        } catch (Throwable ignored) {}
+
+        try {
+            if (vramTotal <= 0) {
+                vramTotal = detectVramTotal();
+            }
+            vramUsed = detectVramUsed();
+            if (vramUsed < 0) vramUsed = 0;
+            if (vramTotal < 0) vramTotal = 0;
+        } catch (Throwable ignored) {}
+    }
+
+    private static long detectVramTotal() {
+        long vram = detectNvidiaVram();
+        if (vram >= 0) return vram;
+        vram = detectAmdVram();
+        if (vram >= 0) return vram;
+        vram = detectIntelVram();
+        if (vram >= 0) return vram;
+        return -1;
+    }
+
+    private static long detectNvidiaVram() {
+        try {
+            Process p = new ProcessBuilder("nvidia-smi", "--query-gpu=memory.total", "--format=csv,noheader,nounits").redirectErrorStream(true).start();
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
+                String s = br.readLine();
+                if (s != null && !s.isEmpty()) {
+                    long mb = Long.parseLong(s.trim());
+                    return mb * 1024 * 1024;
+                }
+            }
+        } catch (Throwable ignored) {}
+        return -1;
+    }
+
+    private static long detectAmdVram() {
+        try {
+            Process p = new ProcessBuilder("rocm-smi", "--showmeminfo", "vram", "--csv").redirectErrorStream(true).start();
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    if (line.contains("Total Memory")) {
+                        String[] parts = line.split(",");
+                        if (parts.length >= 2) {
+                            String val = parts[1].trim().replaceAll("[^0-9]", "");
+                            if (!val.isEmpty()) {
+                                long mb = Long.parseLong(val);
+                                return mb * 1024 * 1024;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        return -1;
+    }
+
+    private static long detectIntelVram() {
+        try {
+            Process p = new ProcessBuilder("xpu-smi", "dump", "-d", "0", "-m", "0", "-u", "0").redirectErrorStream(true).start();
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    if (line.contains("Total Memory")) {
+                        String[] parts = line.split(":");
+                        if (parts.length >= 2) {
+                            String val = parts[1].trim().replaceAll("[^0-9]", "");
+                            if (!val.isEmpty()) {
+                                long mb = Long.parseLong(val);
+                                return mb * 1024 * 1024;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+        return -1;
+    }
+
+    private static long detectVramUsed() {
+        try {
+            Process p = new ProcessBuilder("nvidia-smi", "--query-gpu=memory.used", "--format=csv,noheader,nounits").redirectErrorStream(true).start();
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(p.getInputStream(), StandardCharsets.UTF_8))) {
+                String s = br.readLine();
+                if (s != null && !s.isEmpty()) {
+                    long mb = Long.parseLong(s.trim());
+                    return mb * 1024 * 1024;
+                }
+            }
+        } catch (Throwable ignored) {}
+        return -1;
+    }
+
+    private static void sampleTime() {
+        irlTime = System.currentTimeMillis();
+        try {
+            MinecraftClient mc = MinecraftClient.getInstance();
+            if (mc != null && mc.world != null) {
+                long currentGameTime = mc.world.getTimeOfDay();
+                long now = System.nanoTime();
+                if (lastGameTime > 0 && currentGameTime != lastGameTime) {
+                    long timeDelta = now - lastTpsSampleTime;
+                    long tickDelta = currentGameTime - lastGameTime;
+                    if (timeDelta > 0 && tickDelta > 0) {
+                        double seconds = (double) timeDelta / 1_000_000_000.0;
+                        tps = Math.min(20.0, tickDelta / seconds);
+                    }
+                }
+                lastGameTime = currentGameTime;
+                lastTpsSampleTime = now;
+                gameTime = currentGameTime;
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    private static void samplePingAndCoords() {
+        try {
+            MinecraftClient mc = MinecraftClient.getInstance();
+            if (mc != null && mc.player != null) {
+                ping = mc.getNetworkHandler().getPlayerListEntry(mc.player.getUuid()).getLatency();
+                x = mc.player.getX();
+                y = mc.player.getY();
+                z = mc.player.getZ();
+                chunkX = (int) Math.floor(x / 16.0);
+                chunkZ = (int) Math.floor(z / 16.0);
+                direction = mc.player.getYaw();
+                lightLevel = mc.world.getLightLevel(mc.player.getBlockPos());
+                worldAge = mc.world.getTime();
+                inGameDay = worldAge / 24000L + 1L;
+                int count = 0;
+                for (net.minecraft.entity.Entity e : mc.world.getEntities()) {
+                    count++;
+                }
+                entityCount = count;
+                String biomeId = mc.world.getBiome(mc.player.getBlockPos()).getKey().orElseThrow().getValue().toString();
+                biome = biomeId.contains("/") ? biomeId.substring(biomeId.lastIndexOf('/') + 1).replace("_", " ") : biomeId;
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    private static void sampleFps() {
+        frameCount++;
+        long now = System.nanoTime();
+        synchronized (FPS_LOCK) {
+            fpsSamples.add(now);
+            while (!fpsSamples.isEmpty() && fpsSamples.peek() < now - TimeUnit.MINUTES.toNanos(15)) {
+                fpsSamples.poll();
+            }
+            if (now - lastFpsTime >= TimeUnit.SECONDS.toNanos(1)) {
+                lastFpsTime = now;
+                int count = 0;
+                long oneMinAgo = now - TimeUnit.MINUTES.toNanos(1);
+                long fiveMinAgo = now - TimeUnit.MINUTES.toNanos(5);
+                long fifteenMinAgo = now - TimeUnit.MINUTES.toNanos(15);
+                int oneMin = 0, fiveMin = 0, fifteenMin = 0;
+                for (Long t : fpsSamples) {
+                    count++;
+                    if (t >= oneMinAgo) oneMin++;
+                    if (t >= fiveMinAgo) fiveMin++;
+                    if (t >= fifteenMinAgo) fifteenMin++;
+                }
+                if (count > 0) {
+                    fps1Min = (float) oneMin;
+                    fps5Min = (float) fiveMin;
+                    fps15Min = (float) fifteenMin;
+                }
+            }
+        }
+    }
+
+    public static void recordTick() {
+    }
+
+    public static long ramTotal() { return ramTotal; }
+    public static long ramUsed() { return ramUsed; }
+    public static long vramTotal() { return vramTotal; }
+    public static long vramUsed() { return vramUsed; }
+    public static int ping() { return ping; }
+    public static double posX() { return x; }
+    public static double posY() { return y; }
+    public static double posZ() { return z; }
+    public static long irlTime() { return irlTime; }
+    public static long gameTime() { return gameTime; }
+    public static float fps1Min() { return fps1Min; }
+    public static float fps5Min() { return fps5Min; }
+    public static float fps15Min() { return fps15Min; }
+    public static double tps() { return tps; }
+    public static String biome() { return biome; }
+    public static int chunkX() { return chunkX; }
+    public static int chunkZ() { return chunkZ; }
+    public static int entityCount() { return entityCount; }
+    public static float direction() { return direction; }
+    public static int lightLevel() { return lightLevel; }
+    public static long inGameDay() { return inGameDay; }
+    public static long worldAge() { return worldAge; }
 }

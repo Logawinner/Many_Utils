@@ -1,4 +1,4 @@
-package me.anchorhelper.gpucpu_util;
+package me.anchorhelper.mc_utils;
 
 import java.io.BufferedReader;
 import java.io.IOException;

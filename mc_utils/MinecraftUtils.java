@@ -1,4 +1,4 @@
-package me.anchorhelper.gpucpu_util;
+package me.anchorhelper.mc_utils;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -6,7 +6,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.text.Text;
 import net.minecraft.client.MinecraftClient;
 
-public class Gpucpu_util implements ClientModInitializer {
+public class MinecraftUtils implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         Config.load();

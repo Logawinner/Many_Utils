@@ -1,4 +1,4 @@
-package me.anchorhelper.gpucpu_util;
+package me.anchorhelper.mc_utils;
 
 import com.sun.jna.Library;
 import com.sun.jna.Native;

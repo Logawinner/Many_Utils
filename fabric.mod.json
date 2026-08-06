@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "id": "gpucpu_util",
+  "id": "minecraft_utils",
   "version": "1.21.11",
-  "name": "GpuCpu Util",
-  "description": "On-screen CPU/GPU usage with Mod Menu settings.",
-  "authors": ["cutebow"],
+  "name": "Minecraft Utils",
+  "description": "On-screen stats with Mod Menu settings.",
+  "authors": ["Logawinner", "cutebow"],
   "license": "MIT",
   "environment": "*",
   "icon": "assets/icon.png",
   "entrypoints": {
-    "client": ["me.anchorhelper.gpucpu_util.Gpucpu_util"],
-    "modmenu": ["me.anchorhelper.gpucpu_util.ModMenuIntegration"]
+    "client": ["me.anchorhelper.mc_utils.MinecraftUtils"],
+    "modmenu": ["me.anchorhelper.mc_utils.ModMenuIntegration"]
   },
   "depends": {
     "fabricloader": ">=0.18.1",

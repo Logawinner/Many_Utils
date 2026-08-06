@@ -1,4 +1,4 @@
-package me.anchorhelper.gpucpu_util;
+package me.anchorhelper.mc_utils;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -29,12 +29,12 @@ public class TestCommands {
                 TestCommands.send("GPU test mode: " + choice.name().toLowerCase());
                 return 1;
             })));
-            dispatcher.register(ClientCommandManager.literal("gpucpu_reload").executes(ctx -> {
+            dispatcher.register(ClientCommandManager.literal("mc_utils_reload").executes(ctx -> {
                 HudTemplate.reload();
-                TestCommands.send("GpuCpu Util: reloaded template");
+                TestCommands.send("Minecraft Utils: reloaded template");
                 return 1;
             }));
-            dispatcher.register(ClientCommandManager.literal("gpucpu_template").executes(ctx -> {
+            dispatcher.register(ClientCommandManager.literal("mc_utils_template").executes(ctx -> {
                 TestCommands.send("Template file: " + String.valueOf(HudTemplate.path().toAbsolutePath()));
                 return 1;
             }));
