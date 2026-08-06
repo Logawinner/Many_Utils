@@ -1,4 +1,4 @@
-package me.anchorhelper.mc_utils;
+package me.anchorhelper.many_utils;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
@@ -6,12 +6,15 @@ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.text.Text;
 import net.minecraft.client.MinecraftClient;
 
-public class MinecraftUtils implements ClientModInitializer {
+public class ManyUtils implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         Config.load();
         Metrics.start();
-        HudRenderCallback.EVENT.register((context, tickDelta) -> Hud.draw(context));
+        HudRenderCallback.EVENT.register((context, tickDelta) -> {
+            Metrics.recordFrame();
+            Hud.draw(context);
+        });
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             if (FirstRun.markIfFirst()) {
                 MinecraftClient mc = client;

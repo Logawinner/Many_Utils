@@ -1,4 +1,4 @@
-package me.anchorhelper.mc_utils;
+package me.anchorhelper.many_utils;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -13,7 +13,7 @@ import java.util.List;
 import net.fabricmc.loader.api.FabricLoader;
 
 public final class HudTemplate {
-    private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve("minecraft_utils.txt");
+    private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve("many_utils.txt");
     private static volatile List<Line> cached = Collections.emptyList();
 
     public static Path path() {

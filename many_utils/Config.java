@@ -1,4 +1,4 @@
-package me.anchorhelper.mc_utils;
+package me.anchorhelper.many_utils;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -65,7 +65,7 @@ public class Config {
     public boolean moveMode = false;
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-    private static final File FILE = FabricLoader.getInstance().getConfigDir().resolve("minecraft_utils.json").toFile();
+    private static final File FILE = FabricLoader.getInstance().getConfigDir().resolve("many_utils.json").toFile();
     public static Config INSTANCE = new Config();
 
     public static void load() {

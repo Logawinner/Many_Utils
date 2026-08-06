@@ -1,4 +1,4 @@
-package me.anchorhelper.mc_utils;
+package me.anchorhelper.many_utils;
 
 public class HudOverrides {
     private static volatile VendorChoice cpu = VendorChoice.DEFAULT;

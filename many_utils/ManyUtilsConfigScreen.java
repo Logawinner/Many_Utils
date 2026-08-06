@@ -1,4 +1,4 @@
-package me.anchorhelper.mc_utils;
+package me.anchorhelper.many_utils;
 
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
@@ -6,16 +6,16 @@ import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
 import net.minecraft.text.Text;
 import net.minecraft.client.gui.screen.Screen;
 
-public class MinecraftUtilsConfigScreen {
+public class ManyUtilsConfigScreen {
     public static Screen create(Screen parent) {
         Config cfg = Config.INSTANCE;
-        ConfigBuilder b = ConfigBuilder.create().setParentScreen(parent).setTitle(Text.literal("Minecraft Utils"));
+        ConfigBuilder b = ConfigBuilder.create().setParentScreen(parent).setTitle(Text.literal("many Utils"));
         b.setSavingRunnable(Config::save);
         ConfigEntryBuilder e = b.entryBuilder();
 
         ConfigCategory template = b.getOrCreateCategory(Text.literal("Template"));
-        template.addEntry(e.startTextDescription(Text.literal("Template file: config/minecraft_utils.txt")).build());
-        template.addEntry(e.startTextDescription(Text.literal("Edit the file with any text editor, then use Reload Template (in-game: /mc_utils_reload) or restart.")).build());
+        template.addEntry(e.startTextDescription(Text.literal("Template file: config/many_utils.txt")).build());
+        template.addEntry(e.startTextDescription(Text.literal("Edit the file with any text editor, then use Reload Template (in-game: /many_utils_reload) or restart.")).build());
 
         ConfigCategory anim = b.getOrCreateCategory(Text.literal("Animated"));
         anim.addEntry(e.startBooleanToggle(Text.literal("Animate FPS Text"), cfg.animateFps).setSaveConsumer(v -> cfg.animateFps = v).build());
@@ -45,7 +45,7 @@ public class MinecraftUtilsConfigScreen {
         toggles.addEntry(e.startBooleanToggle(Text.literal("Show Coords"), cfg.showCoords).setSaveConsumer(v -> cfg.showCoords = v).build());
         toggles.addEntry(e.startBooleanToggle(Text.literal("Show TPS"), cfg.showTps).setSaveConsumer(v -> cfg.showTps = v).build());
         toggles.addEntry(e.startBooleanToggle(Text.literal("Show Biome"), cfg.showBiome).setSaveConsumer(v -> cfg.showBiome = v).build());
-        toggles.addEntry(e.startBooleanToggle(Text.literal("Show Chunk Coords"), cfg.showChunkCoords).setSaveConsumer(v -> cfg.showChunkCoords = v).build());
+        toggles.addEntry(e.startBooleanToggle(Text.literal("Show Chunk XYZ"), cfg.showChunkCoords).setSaveConsumer(v -> cfg.showChunkCoords = v).build());
         toggles.addEntry(e.startBooleanToggle(Text.literal("Show Entity Count"), cfg.showEntityCount).setSaveConsumer(v -> cfg.showEntityCount = v).build());
         toggles.addEntry(e.startBooleanToggle(Text.literal("Show Direction"), cfg.showDirection).setSaveConsumer(v -> cfg.showDirection = v).build());
         toggles.addEntry(e.startBooleanToggle(Text.literal("Show Light Level"), cfg.showLightLevel).setSaveConsumer(v -> cfg.showLightLevel = v).build());

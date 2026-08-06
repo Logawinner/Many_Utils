@@ -1,4 +1,4 @@
-package me.anchorhelper.mc_utils;
+package me.anchorhelper.many_utils;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -9,7 +9,7 @@ import java.nio.file.attribute.FileAttribute;
 import net.fabricmc.loader.api.FabricLoader;
 
 public class FirstRun {
-    private static final String FLAG_NAME = "minecraft_utils_firstrun.flag";
+    private static final String FLAG_NAME = "many_utils_firstrun.flag";
 
     public static boolean markIfFirst() {
         Path cfgDir = FabricLoader.getInstance().getConfigDir();

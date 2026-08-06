@@ -1,4 +1,4 @@
-package me.anchorhelper.mc_utils;
+package me.anchorhelper.many_utils;
 
 import com.sun.management.OperatingSystemMXBean;
 import java.io.BufferedReader;
@@ -17,7 +17,7 @@ import net.minecraft.client.MinecraftClient;
 public class Metrics {
     private static final OperatingSystemMXBean OS = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
     private static final ScheduledExecutorService EXEC = Executors.newSingleThreadScheduledExecutor(r -> {
-        Thread t = new Thread(r, "MinecraftUtils-Sampler");
+        Thread t = new Thread(r, "ManyUtils-Sampler");
         t.setDaemon(true);
         return t;
     });
@@ -65,8 +65,8 @@ public class Metrics {
     private static volatile float fps15Min = 0;
     private static final java.util.Queue<Sample> fpsSamples = new java.util.ArrayDeque<>();
     private static final Object FPS_LOCK = new Object();
-    private static long lastFpsTime = System.nanoTime();
-    private static int frameCount = 0;
+    private static long lastFpsSampleNanos = System.nanoTime();
+    private static final java.util.concurrent.atomic.AtomicInteger frameCount = new java.util.concurrent.atomic.AtomicInteger(0);
 
     private static volatile double tps = 20.0;
     private static volatile float tps1Min = 20;
@@ -100,7 +100,7 @@ public class Metrics {
             sampleFps();
             samplePingRolling();
             sampleTpsRolling();
-        }, 0, 1, TimeUnit.SECONDS);
+        }, 0, 500, TimeUnit.MILLISECONDS);
     }
 
     private static void sampleCpu() {
@@ -219,7 +219,7 @@ public class Metrics {
         if (nvmlChecked) return;
         nvmlChecked = true;
         try {
-            nvmlClass = Class.forName("me.anchorhelper.mc_utils.Nvml");
+            nvmlClass = Class.forName("me.anchorhelper.many_utils.Nvml");
             Method avail = null, init = null;
             try { avail = nvmlClass.getMethod("available"); } catch (Throwable t) {}
             try { init = nvmlClass.getMethod("init"); } catch (Throwable t) {}
@@ -470,8 +470,8 @@ public class Metrics {
                 x = mc.player.getX();
                 y = mc.player.getY();
                 z = mc.player.getZ();
-                chunkX = (int) Math.floor(x / 16.0);
-                chunkZ = (int) Math.floor(z / 16.0);
+                chunkX = ((int) Math.floor(x) % 16 + 16) % 16;
+                chunkZ = ((int) Math.floor(z) % 16 + 16) % 16;
                 direction = mc.player.getYaw();
                 lightLevel = mc.world.getLightLevel(mc.player.getBlockPos());
                 worldAge = mc.world.getTime();
@@ -483,51 +483,43 @@ public class Metrics {
                 entityCount = count;
                 String biomeId = mc.world.getBiome(mc.player.getBlockPos()).getKey().orElseThrow().getValue().toString();
                 biome = biomeId.contains("/") ? biomeId.substring(biomeId.lastIndexOf('/') + 1).replace("_", " ") : biomeId;
-                
-                long now = System.nanoTime();
-                synchronized (PING_LOCK) {
-                    pingSamples.add(new Sample(now, ping >= 0 ? ping : 0));
-                    while (!pingSamples.isEmpty() && pingSamples.peek().time() < now - TimeUnit.MINUTES.toNanos(15)) {
-                        pingSamples.poll();
-                    }
-                }
             }
         } catch (Throwable ignored) {}
     }
 
     private static void sampleFps() {
-        frameCount++;
         long now = System.nanoTime();
+        int frames = frameCount.getAndSet(0);
+        double elapsedSec = (now - lastFpsSampleNanos) / 1_000_000_000.0;
+        float currentFps = elapsedSec > 0 ? (float) (frames / elapsedSec) : 0;
+        lastFpsSampleNanos = now;
         synchronized (FPS_LOCK) {
-            fpsSamples.add(new Sample(now, frameCount > 0 ? 1.0f : 0.0f));
+            fpsSamples.add(new Sample(now, currentFps));
             while (!fpsSamples.isEmpty() && fpsSamples.peek().time() < now - TimeUnit.MINUTES.toNanos(15)) {
                 fpsSamples.poll();
             }
-            if (now - lastFpsTime >= TimeUnit.SECONDS.toNanos(1)) {
-                lastFpsTime = now;
-                float oneMin = 0, fiveMin = 0, fifteenMin = 0;
-                int oneCount = 0, fiveCount = 0, fifteenCount = 0;
-                long oneMinAgo = now - TimeUnit.MINUTES.toNanos(1);
-                long fiveMinAgo = now - TimeUnit.MINUTES.toNanos(5);
-                long fifteenMinAgo = now - TimeUnit.MINUTES.toNanos(15);
-                for (Sample s : fpsSamples) {
-                    if (s.time() >= oneMinAgo) {
-                        oneMin += s.value();
-                        oneCount++;
-                    }
-                    if (s.time() >= fiveMinAgo) {
-                        fiveMin += s.value();
-                        fiveCount++;
-                    }
-                    if (s.time() >= fifteenMinAgo) {
-                        fifteenMin += s.value();
-                        fifteenCount++;
-                    }
+            float oneMin = 0, fiveMin = 0, fifteenMin = 0;
+            int oneCount = 0, fiveCount = 0, fifteenCount = 0;
+            long oneMinAgo = now - TimeUnit.MINUTES.toNanos(1);
+            long fiveMinAgo = now - TimeUnit.MINUTES.toNanos(5);
+            long fifteenMinAgo = now - TimeUnit.MINUTES.toNanos(15);
+            for (Sample s : fpsSamples) {
+                if (s.time() >= oneMinAgo) {
+                    oneMin += s.value();
+                    oneCount++;
                 }
-                fps1Min = oneCount > 0 ? oneMin : 0;
-                fps5Min = fiveCount > 0 ? fiveMin : 0;
-                fps15Min = fifteenCount > 0 ? fifteenMin : 0;
+                if (s.time() >= fiveMinAgo) {
+                    fiveMin += s.value();
+                    fiveCount++;
+                }
+                if (s.time() >= fifteenMinAgo) {
+                    fifteenMin += s.value();
+                    fifteenCount++;
+                }
             }
+            fps1Min = oneCount > 0 ? oneMin / oneCount : 0;
+            fps5Min = fiveCount > 0 ? fiveMin / fiveCount : 0;
+            fps15Min = fifteenCount > 0 ? fifteenMin / fifteenCount : 0;
         }
     }
 
@@ -538,7 +530,7 @@ public class Metrics {
             while (!pingSamples.isEmpty() && pingSamples.peek().time() < now - TimeUnit.MINUTES.toNanos(15)) {
                 pingSamples.poll();
             }
-            if (now - lastPingSampleTime >= TimeUnit.SECONDS.toNanos(1)) {
+            if (now - lastPingSampleTime >= TimeUnit.MILLISECONDS.toNanos(500)) {
                 lastPingSampleTime = now;
                 float oneMin = 0, fiveMin = 0, fifteenMin = 0;
                 int oneCount = 0, fiveCount = 0, fifteenCount = 0;
@@ -573,7 +565,7 @@ public class Metrics {
             while (!tpsSamples.isEmpty() && tpsSamples.peek().time() < now - TimeUnit.SECONDS.toNanos(15)) {
                 tpsSamples.poll();
             }
-            if (now - lastTpsSampleTime >= TimeUnit.SECONDS.toNanos(1)) {
+            if (now - lastTpsSampleTime >= TimeUnit.MILLISECONDS.toNanos(500)) {
                 lastTpsSampleTime = now;
                 float oneMin = 0, fiveMin = 0, fifteenMin = 0;
                 int oneCount = 0, fiveCount = 0, fifteenCount = 0;
@@ -602,6 +594,10 @@ public class Metrics {
     }
 
     public static void recordTick() {
+    }
+
+    public static void recordFrame() {
+        frameCount.incrementAndGet();
     }
 
     public static long ramTotal() { return ramTotal; }

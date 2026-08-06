@@ -1,4 +1,4 @@
-package me.anchorhelper.mc_utils;
+package me.anchorhelper.many_utils;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
@@ -116,7 +116,7 @@ public class Hud {
         vars.put("ping_label", Config.INSTANCE.showPing ? "Ping:" : "");
         vars.put("coords_label", Config.INSTANCE.showCoords ? "XYZ:" : "");
         vars.put("biome_label", Config.INSTANCE.showBiome ? "Biome:" : "");
-        vars.put("chunk_label", Config.INSTANCE.showChunkCoords ? "Chunk:" : "");
+        vars.put("chunk_label", Config.INSTANCE.showChunkCoords ? "Chunk XYZ:" : "");
         vars.put("entity_label", Config.INSTANCE.showEntityCount ? "Entities:" : "");
         vars.put("direction_label", Config.INSTANCE.showDirection ? "Dir:" : "");
         vars.put("light_label", Config.INSTANCE.showLightLevel ? "Light:" : "");
@@ -234,9 +234,10 @@ public class Hud {
 
         // Ping
         String pingStr = "";
-        String pingUnit = "ms";
+        String pingUnit = "";
         if (Config.INSTANCE.showPing && Metrics.ping() >= 0) {
             pingStr = Integer.toString(Metrics.ping());
+            pingUnit = "ms";
         } else if (Config.INSTANCE.showPing) {
             pingUnit = "";
         }

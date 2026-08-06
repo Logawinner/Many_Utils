@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "id": "minecraft_utils",
+  "id": "many_utils",
   "version": "1.21.11",
-  "name": "Minecraft Utils",
+  "name": "many Utils",
   "description": "On-screen stats with Mod Menu settings.",
   "authors": ["cutebow"],
   "contributors": ["Logawinner"],
@@ -10,8 +10,8 @@
   "environment": "*",
   "icon": "assets/icon.png",
   "entrypoints": {
-    "client": ["me.anchorhelper.mc_utils.MinecraftUtils"],
-    "modmenu": ["me.anchorhelper.mc_utils.ModMenuIntegration"]
+    "client": ["me.anchorhelper.many_utils.ManyUtils"],
+    "modmenu": ["me.anchorhelper.many_utils.ModMenuIntegration"]
   },
   "depends": {
     "fabricloader": ">=0.18.1",
