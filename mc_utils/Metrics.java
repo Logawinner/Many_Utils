@@ -63,14 +63,29 @@ public class Metrics {
     private static volatile float fps1Min = 0;
     private static volatile float fps5Min = 0;
     private static volatile float fps15Min = 0;
-    private static final java.util.Queue<Long> fpsSamples = new java.util.ArrayDeque<>();
+    private static final java.util.Queue<Sample> fpsSamples = new java.util.ArrayDeque<>();
     private static final Object FPS_LOCK = new Object();
     private static long lastFpsTime = System.nanoTime();
     private static int frameCount = 0;
 
     private static volatile double tps = 20.0;
+    private static volatile float tps1Min = 20;
+    private static volatile float tps5Min = 20;
+    private static volatile float tps15Min = 20;
+    private static final java.util.Queue<Sample> tpsSamples = new java.util.ArrayDeque<>();
+    private static final Object TPS_LOCK = new Object();
     private static long lastGameTime = 0;
     private static long lastTpsSampleTime = System.nanoTime();
+
+    private static volatile float ping1Min = -1;
+    private static volatile float ping5Min = -1;
+    private static volatile float ping15Min = -1;
+    private static final java.util.Queue<Sample> pingSamples = new java.util.ArrayDeque<>();
+    private static final Object PING_LOCK = new Object();
+    private static long lastPingSampleTime = System.nanoTime();
+
+    private record Sample(long time, float value) {
+    }
 
     public static void start() {
         if (started) return;
@@ -83,6 +98,8 @@ public class Metrics {
             sampleTime();
             samplePingAndCoords();
             sampleFps();
+            samplePingRolling();
+            sampleTpsRolling();
         }, 0, 1, TimeUnit.SECONDS);
     }
 
@@ -466,6 +483,14 @@ public class Metrics {
                 entityCount = count;
                 String biomeId = mc.world.getBiome(mc.player.getBlockPos()).getKey().orElseThrow().getValue().toString();
                 biome = biomeId.contains("/") ? biomeId.substring(biomeId.lastIndexOf('/') + 1).replace("_", " ") : biomeId;
+                
+                long now = System.nanoTime();
+                synchronized (PING_LOCK) {
+                    pingSamples.add(new Sample(now, ping >= 0 ? ping : 0));
+                    while (!pingSamples.isEmpty() && pingSamples.peek().time() < now - TimeUnit.MINUTES.toNanos(15)) {
+                        pingSamples.poll();
+                    }
+                }
             }
         } catch (Throwable ignored) {}
     }
@@ -474,28 +499,104 @@ public class Metrics {
         frameCount++;
         long now = System.nanoTime();
         synchronized (FPS_LOCK) {
-            fpsSamples.add(now);
-            while (!fpsSamples.isEmpty() && fpsSamples.peek() < now - TimeUnit.MINUTES.toNanos(15)) {
+            fpsSamples.add(new Sample(now, frameCount > 0 ? 1.0f : 0.0f));
+            while (!fpsSamples.isEmpty() && fpsSamples.peek().time() < now - TimeUnit.MINUTES.toNanos(15)) {
                 fpsSamples.poll();
             }
             if (now - lastFpsTime >= TimeUnit.SECONDS.toNanos(1)) {
                 lastFpsTime = now;
-                int count = 0;
+                float oneMin = 0, fiveMin = 0, fifteenMin = 0;
+                int oneCount = 0, fiveCount = 0, fifteenCount = 0;
                 long oneMinAgo = now - TimeUnit.MINUTES.toNanos(1);
                 long fiveMinAgo = now - TimeUnit.MINUTES.toNanos(5);
                 long fifteenMinAgo = now - TimeUnit.MINUTES.toNanos(15);
-                int oneMin = 0, fiveMin = 0, fifteenMin = 0;
-                for (Long t : fpsSamples) {
-                    count++;
-                    if (t >= oneMinAgo) oneMin++;
-                    if (t >= fiveMinAgo) fiveMin++;
-                    if (t >= fifteenMinAgo) fifteenMin++;
+                for (Sample s : fpsSamples) {
+                    if (s.time() >= oneMinAgo) {
+                        oneMin += s.value();
+                        oneCount++;
+                    }
+                    if (s.time() >= fiveMinAgo) {
+                        fiveMin += s.value();
+                        fiveCount++;
+                    }
+                    if (s.time() >= fifteenMinAgo) {
+                        fifteenMin += s.value();
+                        fifteenCount++;
+                    }
                 }
-                if (count > 0) {
-                    fps1Min = (float) oneMin;
-                    fps5Min = (float) fiveMin;
-                    fps15Min = (float) fifteenMin;
+                fps1Min = oneCount > 0 ? oneMin : 0;
+                fps5Min = fiveCount > 0 ? fiveMin : 0;
+                fps15Min = fifteenCount > 0 ? fifteenMin : 0;
+            }
+        }
+    }
+
+    private static void samplePingRolling() {
+        long now = System.nanoTime();
+        synchronized (PING_LOCK) {
+            pingSamples.add(new Sample(now, ping >= 0 ? ping : 0));
+            while (!pingSamples.isEmpty() && pingSamples.peek().time() < now - TimeUnit.MINUTES.toNanos(15)) {
+                pingSamples.poll();
+            }
+            if (now - lastPingSampleTime >= TimeUnit.SECONDS.toNanos(1)) {
+                lastPingSampleTime = now;
+                float oneMin = 0, fiveMin = 0, fifteenMin = 0;
+                int oneCount = 0, fiveCount = 0, fifteenCount = 0;
+                long oneMinAgo = now - TimeUnit.MINUTES.toNanos(1);
+                long fiveMinAgo = now - TimeUnit.MINUTES.toNanos(5);
+                long fifteenMinAgo = now - TimeUnit.MINUTES.toNanos(15);
+                for (Sample s : pingSamples) {
+                    if (s.time() >= oneMinAgo) {
+                        oneMin += s.value();
+                        oneCount++;
+                    }
+                    if (s.time() >= fiveMinAgo) {
+                        fiveMin += s.value();
+                        fiveCount++;
+                    }
+                    if (s.time() >= fifteenMinAgo) {
+                        fifteenMin += s.value();
+                        fifteenCount++;
+                    }
                 }
+                ping1Min = oneCount > 0 ? oneMin / oneCount : -1;
+                ping5Min = fiveCount > 0 ? fiveMin / fiveCount : -1;
+                ping15Min = fifteenCount > 0 ? fifteenMin / fifteenCount : -1;
+            }
+        }
+    }
+
+    private static void sampleTpsRolling() {
+        long now = System.nanoTime();
+        synchronized (TPS_LOCK) {
+            tpsSamples.add(new Sample(now, (float) tps));
+            while (!tpsSamples.isEmpty() && tpsSamples.peek().time() < now - TimeUnit.SECONDS.toNanos(15)) {
+                tpsSamples.poll();
+            }
+            if (now - lastTpsSampleTime >= TimeUnit.SECONDS.toNanos(1)) {
+                lastTpsSampleTime = now;
+                float oneMin = 0, fiveMin = 0, fifteenMin = 0;
+                int oneCount = 0, fiveCount = 0, fifteenCount = 0;
+                long oneMinAgo = now - TimeUnit.MINUTES.toNanos(1);
+                long fiveMinAgo = now - TimeUnit.MINUTES.toNanos(5);
+                long fifteenMinAgo = now - TimeUnit.MINUTES.toNanos(15);
+                for (Sample s : tpsSamples) {
+                    if (s.time() >= oneMinAgo) {
+                        oneMin += s.value();
+                        oneCount++;
+                    }
+                    if (s.time() >= fiveMinAgo) {
+                        fiveMin += s.value();
+                        fiveCount++;
+                    }
+                    if (s.time() >= fifteenMinAgo) {
+                        fifteenMin += s.value();
+                        fifteenCount++;
+                    }
+                }
+                tps1Min = oneCount > 0 ? oneMin / oneCount : 20;
+                tps5Min = fiveCount > 0 ? fiveMin / fiveCount : 20;
+                tps15Min = fifteenCount > 0 ? fifteenMin / fifteenCount : 20;
             }
         }
     }
@@ -517,6 +618,12 @@ public class Metrics {
     public static float fps5Min() { return fps5Min; }
     public static float fps15Min() { return fps15Min; }
     public static double tps() { return tps; }
+    public static float tps1Min() { return tps1Min; }
+    public static float tps5Min() { return tps5Min; }
+    public static float tps15Min() { return tps15Min; }
+    public static float ping1Min() { return ping1Min; }
+    public static float ping5Min() { return ping5Min; }
+    public static float ping15Min() { return ping15Min; }
     public static String biome() { return biome; }
     public static int chunkX() { return chunkX; }
     public static int chunkZ() { return chunkZ; }

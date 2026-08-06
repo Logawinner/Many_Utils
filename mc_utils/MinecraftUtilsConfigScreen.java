@@ -77,7 +77,6 @@ public class MinecraftUtilsConfigScreen {
 
         ConfigCategory advanced = b.getOrCreateCategory(Text.literal("Advanced Stats"));
         advanced.addEntry(e.startBooleanToggle(Text.literal("Advanced FPS Stats (1/5/15 min)"), cfg.advancedFpsStats).setSaveConsumer(v -> cfg.advancedFpsStats = v).build());
-        advanced.addEntry(e.startBooleanToggle(Text.literal("Advanced Memory Stats (used/total)"), cfg.advancedMemoryStats).setSaveConsumer(v -> cfg.advancedMemoryStats = v).build());
         advanced.addEntry(e.startBooleanToggle(Text.literal("Advanced Ping Stats"), cfg.advancedPingStats).setSaveConsumer(v -> cfg.advancedPingStats = v).build());
         advanced.addEntry(e.startBooleanToggle(Text.literal("Advanced TPS Stats"), cfg.advancedTpsStats).setSaveConsumer(v -> cfg.advancedTpsStats = v).build());
 

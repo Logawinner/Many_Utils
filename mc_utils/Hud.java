@@ -95,7 +95,7 @@ public class Hud {
         }
 
         Map<String, String> vars = new java.util.HashMap<>();
-        // Section labels - empty if the entire section is disabled
+        // Section labels - padded to 9 chars for alignment
         boolean cpuSectionEnabled = Config.INSTANCE.showCpu || Config.INSTANCE.showCpuTemp;
         boolean gpuSectionEnabled = Config.INSTANCE.showGpu || Config.INSTANCE.showGpuTemp;
         boolean fpsSectionEnabled = Config.INSTANCE.showFps;
@@ -127,6 +127,9 @@ public class Hud {
         vars.put("fps_1min", Config.INSTANCE.advancedFpsStats ? String.format("%.0f", Metrics.fps1Min()) : "");
         vars.put("fps_5min", Config.INSTANCE.advancedFpsStats ? String.format("%.0f", Metrics.fps5Min()) : "");
         vars.put("fps_15min", Config.INSTANCE.advancedFpsStats ? String.format("%.0f", Metrics.fps15Min()) : "");
+        vars.put("fps_1min_label", Config.INSTANCE.advancedFpsStats ? "1m:" : "");
+        vars.put("fps_5min_label", Config.INSTANCE.advancedFpsStats ? "5m:" : "");
+        vars.put("fps_15min_label", Config.INSTANCE.advancedFpsStats ? "15m:" : "");
         vars.put("cpu_name", Config.INSTANCE.showCpuName ? cpuNameRaw : "");
         vars.put("cpu_vendor", cpuVendor);
         String cpuUseStr = "";
@@ -239,6 +242,12 @@ public class Hud {
         }
         vars.put("ping", pingStr);
         vars.put("ping_unit", pingUnit);
+        vars.put("ping_1min", Config.INSTANCE.advancedPingStats && Metrics.ping1Min() >= 0 ? String.format("%.0f", Metrics.ping1Min()) : "");
+        vars.put("ping_5min", Config.INSTANCE.advancedPingStats && Metrics.ping5Min() >= 0 ? String.format("%.0f", Metrics.ping5Min()) : "");
+        vars.put("ping_15min", Config.INSTANCE.advancedPingStats && Metrics.ping15Min() >= 0 ? String.format("%.0f", Metrics.ping15Min()) : "");
+        vars.put("ping_1min_label", Config.INSTANCE.advancedPingStats ? "1m:" : "");
+        vars.put("ping_5min_label", Config.INSTANCE.advancedPingStats ? "5m:" : "");
+        vars.put("ping_15min_label", Config.INSTANCE.advancedPingStats ? "15m:" : "");
 
         // Coords
         String coordsX = "";
@@ -266,6 +275,12 @@ public class Hud {
         }
         vars.put("tps", tpsStr);
         vars.put("tps_label", Config.INSTANCE.showTps ? "TPS:" : "");
+        vars.put("tps_1min", Config.INSTANCE.advancedTpsStats ? String.format("%.1f", Metrics.tps1Min()) : "");
+        vars.put("tps_5min", Config.INSTANCE.advancedTpsStats ? String.format("%.1f", Metrics.tps5Min()) : "");
+        vars.put("tps_15min", Config.INSTANCE.advancedTpsStats ? String.format("%.1f", Metrics.tps15Min()) : "");
+        vars.put("tps_1min_label", Config.INSTANCE.advancedTpsStats ? "1m:" : "");
+        vars.put("tps_5min_label", Config.INSTANCE.advancedTpsStats ? "5m:" : "");
+        vars.put("tps_15min_label", Config.INSTANCE.advancedTpsStats ? "15m:" : "");
 
         // Biome
         vars.put("biome", Config.INSTANCE.showBiome ? Metrics.biome() : "");
@@ -512,6 +527,21 @@ public class Hud {
                         } else if (key.equals("chunk_z") && Config.INSTANCE.colorizeCoords) {
                             tokenWaved = false;
                             tokenStyle = tokenStyle.withColor(Hud.coordZColor() & 0xFFFFFF);
+                        } else if ((key.equals("fps_1min") || key.equals("fps_5min") || key.equals("fps_15min")) && Config.INSTANCE.colorizeFps) {
+                            tokenWaved = false;
+                            tokenStyle = tokenStyle.withColor(Hud.fpsColor((int) fps) & 0xFFFFFF);
+                        } else if ((key.equals("ping_1min") || key.equals("ping_5min") || key.equals("ping_15min")) && Config.INSTANCE.colorizePing) {
+                            tokenWaved = false;
+                            try {
+                                int p = Integer.parseInt(value);
+                                tokenStyle = tokenStyle.withColor(Hud.pingColor(p) & 0xFFFFFF);
+                            } catch (Exception ignored) {}
+                        } else if ((key.equals("tps_1min") || key.equals("tps_5min") || key.equals("tps_15min")) && Config.INSTANCE.colorizeTps) {
+                            tokenWaved = false;
+                            try {
+                                double t = Double.parseDouble(value);
+                                tokenStyle = tokenStyle.withColor(Hud.tpsColor(t) & 0xFFFFFF);
+                            } catch (Exception ignored) {}
                         }
                     }
                     out.add(new RenderToken(value, tokenStyle, tokenWaved, waveMode));
@@ -748,6 +778,8 @@ public class Hud {
     }
 
     private static String formatDirection(float yaw) {
+        while (yaw >= 180) yaw -= 360;
+        while (yaw < -180) yaw += 360;
         String dir = "";
         if (yaw >= -45 && yaw < 45) dir = "S";
         else if (yaw >= 45 && yaw < 135) dir = "W";
@@ -765,10 +797,10 @@ public class Hud {
                     int percent = Integer.parseInt(s.trim());
                     boolean charging = false;
                     try {
-                        Process p2 = new ProcessBuilder("bash", "-c", "cat /sys/class/power_supply/BAT*/status 2>/dev/null | grep -i charging || echo 'Discharging'").redirectErrorStream(true).start();
+                        Process p2 = new ProcessBuilder("bash", "-c", "cat /sys/class/power_supply/BAT*/status 2>/dev/null || echo 'Unknown'").redirectErrorStream(true).start();
                         try (BufferedReader br2 = new BufferedReader(new InputStreamReader(p2.getInputStream(), StandardCharsets.UTF_8))) {
                             String status = br2.readLine();
-                            if (status != null && status.toLowerCase().contains("charging")) {
+                            if (status != null && status.trim().equalsIgnoreCase("Charging")) {
                                 charging = true;
                             }
                         }

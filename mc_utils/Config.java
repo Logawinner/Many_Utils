@@ -31,7 +31,6 @@ public class Config {
     public boolean showBattery = false;
 
     public boolean advancedFpsStats = false;
-    public boolean advancedMemoryStats = false;
     public boolean advancedPingStats = false;
     public boolean advancedTpsStats = false;
 
