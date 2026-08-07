@@ -11,11 +11,9 @@ public class ManyUtils implements ClientModInitializer {
     public void onInitializeClient() {
         Config.load();
         Metrics.start();
-        HudRenderCallback.EVENT.register((context, tickDelta) -> {
-            Metrics.recordFrame();
-            Hud.draw(context);
-        });
+        HudRenderCallback.EVENT.register((context, tickDelta) -> Hud.draw(context));
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
+            Metrics.resetFps();
             if (FirstRun.markIfFirst()) {
                 MinecraftClient mc = client;
                 mc.execute(() -> {

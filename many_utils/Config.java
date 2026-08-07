@@ -56,13 +56,28 @@ public class Config {
     public boolean animateFps = false;
     public boolean animateCpuName = false;
     public boolean animateGpuName = false;
+    public boolean animateBattery = false;
+    public boolean animateMemory = false;
+    public boolean animateVram = false;
+    public boolean animateIrlTime = false;
+    public boolean animateGameTime = false;
+    public boolean animatePing = false;
+    public boolean animateCoords = false;
+    public boolean animateTps = false;
+    public boolean animateBiome = false;
+    public boolean animateChunkCoords = false;
+    public boolean animateEntityCount = false;
+    public boolean animateDirection = false;
+    public boolean animateLightLevel = false;
+    public boolean animateInGameDay = false;
+    public boolean animateWorldAge = false;
 
     public int x = 6;
     public int y = 6;
     public double scale = 1.0;
     public int color = 0xFFFFFF;
     public boolean shadow = true;
-    public boolean moveMode = false;
+    public boolean repositionMode = false;
 
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static final File FILE = FabricLoader.getInstance().getConfigDir().resolve("many_utils.json").toFile();

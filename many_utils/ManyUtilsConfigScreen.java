@@ -3,8 +3,11 @@ package me.anchorhelper.many_utils;
 import me.shedaniel.clothconfig2.api.ConfigBuilder;
 import me.shedaniel.clothconfig2.api.ConfigCategory;
 import me.shedaniel.clothconfig2.api.ConfigEntryBuilder;
-import net.minecraft.text.Text;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.ButtonWidget;
+import net.minecraft.text.Text;
 
 public class ManyUtilsConfigScreen {
     public static Screen create(Screen parent) {
@@ -21,6 +24,21 @@ public class ManyUtilsConfigScreen {
         anim.addEntry(e.startBooleanToggle(Text.literal("Animate FPS Text"), cfg.animateFps).setSaveConsumer(v -> cfg.animateFps = v).build());
         anim.addEntry(e.startBooleanToggle(Text.literal("Animate CPU Name"), cfg.animateCpuName).setSaveConsumer(v -> cfg.animateCpuName = v).build());
         anim.addEntry(e.startBooleanToggle(Text.literal("Animate GPU Name"), cfg.animateGpuName).setSaveConsumer(v -> cfg.animateGpuName = v).build());
+        anim.addEntry(e.startBooleanToggle(Text.literal("Animate Battery"), cfg.animateBattery).setSaveConsumer(v -> cfg.animateBattery = v).build());
+        anim.addEntry(e.startBooleanToggle(Text.literal("Animate Memory"), cfg.animateMemory).setSaveConsumer(v -> cfg.animateMemory = v).build());
+        anim.addEntry(e.startBooleanToggle(Text.literal("Animate VRAM"), cfg.animateVram).setSaveConsumer(v -> cfg.animateVram = v).build());
+        anim.addEntry(e.startBooleanToggle(Text.literal("Animate IRL Time"), cfg.animateIrlTime).setSaveConsumer(v -> cfg.animateIrlTime = v).build());
+        anim.addEntry(e.startBooleanToggle(Text.literal("Animate Game Time"), cfg.animateGameTime).setSaveConsumer(v -> cfg.animateGameTime = v).build());
+        anim.addEntry(e.startBooleanToggle(Text.literal("Animate Ping"), cfg.animatePing).setSaveConsumer(v -> cfg.animatePing = v).build());
+        anim.addEntry(e.startBooleanToggle(Text.literal("Animate Coords"), cfg.animateCoords).setSaveConsumer(v -> cfg.animateCoords = v).build());
+        anim.addEntry(e.startBooleanToggle(Text.literal("Animate TPS"), cfg.animateTps).setSaveConsumer(v -> cfg.animateTps = v).build());
+        anim.addEntry(e.startBooleanToggle(Text.literal("Animate Biome"), cfg.animateBiome).setSaveConsumer(v -> cfg.animateBiome = v).build());
+        anim.addEntry(e.startBooleanToggle(Text.literal("Animate Chunk XYZ"), cfg.animateChunkCoords).setSaveConsumer(v -> cfg.animateChunkCoords = v).build());
+        anim.addEntry(e.startBooleanToggle(Text.literal("Animate Entity Count"), cfg.animateEntityCount).setSaveConsumer(v -> cfg.animateEntityCount = v).build());
+        anim.addEntry(e.startBooleanToggle(Text.literal("Animate Direction"), cfg.animateDirection).setSaveConsumer(v -> cfg.animateDirection = v).build());
+        anim.addEntry(e.startBooleanToggle(Text.literal("Animate Light Level"), cfg.animateLightLevel).setSaveConsumer(v -> cfg.animateLightLevel = v).build());
+        anim.addEntry(e.startBooleanToggle(Text.literal("Animate In-Game Day"), cfg.animateInGameDay).setSaveConsumer(v -> cfg.animateInGameDay = v).build());
+        anim.addEntry(e.startBooleanToggle(Text.literal("Animate World Age"), cfg.animateWorldAge).setSaveConsumer(v -> cfg.animateWorldAge = v).build());
 
         ConfigCategory toggles = b.getOrCreateCategory(Text.literal("Toggles"));
         toggles.addEntry(e.startBooleanToggle(Text.literal("Show FPS"), cfg.showFps).setSaveConsumer(v -> cfg.showFps = v).build());
@@ -51,9 +69,8 @@ public class ManyUtilsConfigScreen {
         toggles.addEntry(e.startBooleanToggle(Text.literal("Show Light Level"), cfg.showLightLevel).setSaveConsumer(v -> cfg.showLightLevel = v).build());
         toggles.addEntry(e.startBooleanToggle(Text.literal("Show In-Game Day"), cfg.showInGameDay).setSaveConsumer(v -> cfg.showInGameDay = v).build());
         toggles.addEntry(e.startBooleanToggle(Text.literal("Show World Age"), cfg.showWorldAge).setSaveConsumer(v -> cfg.showWorldAge = v).build());
-        toggles.addEntry(e.startBooleanToggle(Text.literal("Show Bat"), cfg.showBattery).setSaveConsumer(v -> cfg.showBattery = v).build());
+        toggles.addEntry(e.startBooleanToggle(Text.literal("Show Battery"), cfg.showBattery).setSaveConsumer(v -> cfg.showBattery = v).build());
         toggles.addEntry(e.startBooleanToggle(Text.literal("Text Shadow"), cfg.shadow).setSaveConsumer(v -> cfg.shadow = v).build());
-        toggles.addEntry(e.startBooleanToggle(Text.literal("Move Mode (Drag to reposition HUD)"), cfg.moveMode).setSaveConsumer(v -> cfg.moveMode = v).build());
 
         ConfigCategory colors = b.getOrCreateCategory(Text.literal("Colored Stats"));
         colors.addEntry(e.startBooleanToggle(Text.literal("Colorize CPU Usage"), cfg.colorizeCpuUsage).setSaveConsumer(v -> cfg.colorizeCpuUsage = v).build());
@@ -85,6 +102,17 @@ public class ManyUtilsConfigScreen {
         display.addEntry(e.startIntField(Text.literal("Y (top padding)"), cfg.y).setMin(0).setSaveConsumer(v -> cfg.y = v).build());
         display.addEntry(e.startDoubleField(Text.literal("Scale"), cfg.scale).setMin(0.5).setMax(4.0).setSaveConsumer(v -> cfg.scale = v).build());
         display.addEntry(e.startColorField(Text.literal("Base Color"), cfg.color).setSaveConsumer(v -> cfg.color = v).build());
+        display.addEntry(e.startBooleanToggle(Text.literal("Reposition HUD"), cfg.repositionMode).setSaveConsumer(v -> cfg.repositionMode = v).build());
+
+        b.setSavingRunnable(() -> {
+            if (cfg.repositionMode) {
+                cfg.repositionMode = false;
+                Config.save();
+                net.minecraft.client.MinecraftClient.getInstance().executeSync(() -> {
+                    PositionScreen.open(null);
+                });
+            }
+        });
 
         return b.build();
     }

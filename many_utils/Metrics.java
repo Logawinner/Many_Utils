@@ -50,6 +50,7 @@ public class Metrics {
     private static volatile double z = 0;
     private static volatile String biome = "";
     private static volatile int chunkX = 0;
+    private static volatile int chunkY = 0;
     private static volatile int chunkZ = 0;
     private static volatile int entityCount = 0;
     private static volatile float direction = 0f;
@@ -63,10 +64,9 @@ public class Metrics {
     private static volatile float fps1Min = 0;
     private static volatile float fps5Min = 0;
     private static volatile float fps15Min = 0;
-    private static final java.util.Queue<Sample> fpsSamples = new java.util.ArrayDeque<>();
+    private static final java.util.List<Sample> fpsSamples = new java.util.ArrayList<>();
+    private static final int MAX_FPS_SAMPLES = 1800;
     private static final Object FPS_LOCK = new Object();
-    private static long lastFpsSampleNanos = System.nanoTime();
-    private static final java.util.concurrent.atomic.AtomicInteger frameCount = new java.util.concurrent.atomic.AtomicInteger(0);
 
     private static volatile double tps = 20.0;
     private static volatile float tps1Min = 20;
@@ -471,6 +471,7 @@ public class Metrics {
                 y = mc.player.getY();
                 z = mc.player.getZ();
                 chunkX = ((int) Math.floor(x) % 16 + 16) % 16;
+                chunkY = ((int) Math.floor(y) % 16 + 16) % 16;
                 chunkZ = ((int) Math.floor(z) % 16 + 16) % 16;
                 direction = mc.player.getYaw();
                 lightLevel = mc.world.getLightLevel(mc.player.getBlockPos());
@@ -488,38 +489,35 @@ public class Metrics {
     }
 
     private static void sampleFps() {
-        long now = System.nanoTime();
-        int frames = frameCount.getAndSet(0);
-        double elapsedSec = (now - lastFpsSampleNanos) / 1_000_000_000.0;
-        float currentFps = elapsedSec > 0 ? (float) (frames / elapsedSec) : 0;
-        lastFpsSampleNanos = now;
+        float currentFps = 0;
+        try {
+            MinecraftClient mc = MinecraftClient.getInstance();
+            if (mc != null) {
+                currentFps = mc.getCurrentFps();
+            }
+        } catch (Throwable ignored) {}
         synchronized (FPS_LOCK) {
-            fpsSamples.add(new Sample(now, currentFps));
-            while (!fpsSamples.isEmpty() && fpsSamples.peek().time() < now - TimeUnit.MINUTES.toNanos(15)) {
-                fpsSamples.poll();
+            fpsSamples.add(new Sample(System.nanoTime(), currentFps));
+            while (fpsSamples.size() > MAX_FPS_SAMPLES) {
+                fpsSamples.remove(0);
             }
-            float oneMin = 0, fiveMin = 0, fifteenMin = 0;
-            int oneCount = 0, fiveCount = 0, fifteenCount = 0;
-            long oneMinAgo = now - TimeUnit.MINUTES.toNanos(1);
-            long fiveMinAgo = now - TimeUnit.MINUTES.toNanos(5);
-            long fifteenMinAgo = now - TimeUnit.MINUTES.toNanos(15);
-            for (Sample s : fpsSamples) {
-                if (s.time() >= oneMinAgo) {
-                    oneMin += s.value();
-                    oneCount++;
-                }
-                if (s.time() >= fiveMinAgo) {
-                    fiveMin += s.value();
-                    fiveCount++;
-                }
-                if (s.time() >= fifteenMinAgo) {
-                    fifteenMin += s.value();
-                    fifteenCount++;
-                }
+            int size = fpsSamples.size();
+            int count1m = Math.min(120, size);
+            int count5m = Math.min(600, size);
+            int count15m = Math.min(1800, size);
+            float sum1m = 0, sum5m = 0, sum15m = 0;
+            for (int i = size - count1m; i < size; i++) {
+                sum1m += fpsSamples.get(i).value();
             }
-            fps1Min = oneCount > 0 ? oneMin / oneCount : 0;
-            fps5Min = fiveCount > 0 ? fiveMin / fiveCount : 0;
-            fps15Min = fifteenCount > 0 ? fifteenMin / fifteenCount : 0;
+            for (int i = size - count5m; i < size; i++) {
+                sum5m += fpsSamples.get(i).value();
+            }
+            for (int i = size - count15m; i < size; i++) {
+                sum15m += fpsSamples.get(i).value();
+            }
+            fps1Min = count1m > 0 ? sum1m / count1m : 0;
+            fps5Min = count5m > 0 ? sum5m / count5m : 0;
+            fps15Min = count15m > 0 ? sum15m / count15m : 0;
         }
     }
 
@@ -596,8 +594,13 @@ public class Metrics {
     public static void recordTick() {
     }
 
-    public static void recordFrame() {
-        frameCount.incrementAndGet();
+    public static void resetFps() {
+        synchronized (FPS_LOCK) {
+            fpsSamples.clear();
+            fps1Min = 0;
+            fps5Min = 0;
+            fps15Min = 0;
+        }
     }
 
     public static long ramTotal() { return ramTotal; }
@@ -622,6 +625,7 @@ public class Metrics {
     public static float ping15Min() { return ping15Min; }
     public static String biome() { return biome; }
     public static int chunkX() { return chunkX; }
+    public static int chunkY() { return chunkY; }
     public static int chunkZ() { return chunkZ; }
     public static int entityCount() { return entityCount; }
     public static float direction() { return direction; }

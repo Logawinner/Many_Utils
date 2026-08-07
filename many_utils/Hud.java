@@ -30,15 +30,38 @@ public class Hud {
     private static final int AMD_DARK = 0xF59E0B;
     private static final int FPS_YELLOW = 0xFFCC00;
     private static final int FPS_GOLD = 0xFFD700;
+    private static final int BATTERY_C1 = 0x00FF00;
+    private static final int BATTERY_C2 = 0xFF0000;
+    private static final int MEMORY_C1 = 0x00BFFF;
+    private static final int MEMORY_C2 = 0xFF4500;
+    private static final int VRAM_C1 = 0xFF69B4;
+    private static final int VRAM_C2 = 0x00FF00;
+    private static final int IRL_TIME_C1 = 0xFFFFFF;
+    private static final int IRL_TIME_C2 = 0x000000;
+    private static final int GAME_TIME_C1 = 0xFFA500;
+    private static final int GAME_TIME_C2 = 0x0000FF;
+    private static final int PING_C1 = 0x00FF00;
+    private static final int PING_C2 = 0xFF00FF;
+    private static final int COORDS_C1 = 0xFF5555;
+    private static final int COORDS_C2 = 0x00FF00;
+    private static final int TPS_C1 = 0x00FF00;
+    private static final int TPS_C2 = 0x0000FF;
+    private static final int BIOME_C1 = 0x00FF00;
+    private static final int BIOME_C2 = 0xFF0000;
+    private static final int CHUNK_C1 = 0xFF5555;
+    private static final int CHUNK_C2 = 0x00FF00;
+    private static final int ENTITY_C1 = 0x00FF00;
+    private static final int ENTITY_C2 = 0xFF0000;
+    private static final int DIRECTION_C1 = 0x00BFFF;
+    private static final int DIRECTION_C2 = 0xFF4500;
+    private static final int LIGHT_C1 = 0xFFFF00;
+    private static final int LIGHT_C2 = 0x0000FF;
+    private static final int DAY_C1 = 0xFFA500;
+    private static final int DAY_C2 = 0x0000FF;
+    private static final int AGE_C1 = 0xFFFFFF;
+    private static final int AGE_C2 = 0x000000;
     private static final long WAVE_PERIOD_MS = 4000;
     private static final double PHASE_STEP = Math.PI / 10.0;
-
-    private static boolean dragging = false;
-    private static int dragOffsetX = 0;
-    private static int dragOffsetY = 0;
-    private static int lastMouseX = 0;
-    private static int lastMouseY = 0;
-    private static boolean wasMouseDown = false;
 
     public static void draw(DrawContext context) {
         MinecraftClient mc = MinecraftClient.getInstance();
@@ -178,7 +201,7 @@ public class Hud {
         }
         vars.put("battery", batteryStr);
         vars.put("battery_charging", batteryCharging);
-        vars.put("bat_label", Config.INSTANCE.showBattery ? "Bat:" : "");
+        vars.put("bat_label", Config.INSTANCE.showBattery ? "Battery:" : "");
         
         String cpuTempStr = "";
         String cpuTempUnit = "";
@@ -254,20 +277,14 @@ public class Hud {
         String coordsX = "";
         String coordsY = "";
         String coordsZ = "";
-        String slash1 = "";
-        String slash2 = "";
         if (Config.INSTANCE.showCoords) {
             coordsX = String.format("%.1f", Metrics.posX());
             coordsY = String.format("%.1f", Metrics.posY());
             coordsZ = String.format("%.1f", Metrics.posZ());
-            slash1 = "/";
-            slash2 = "/";
         }
         vars.put("coords_x", coordsX);
         vars.put("coords_y", coordsY);
         vars.put("coords_z", coordsZ);
-        vars.put("slash1", slash1);
-        vars.put("slash2", slash2);
 
         // TPS
         String tpsStr = "";
@@ -288,16 +305,16 @@ public class Hud {
 
         // Chunk Coords
         String chunkXStr = "";
+        String chunkYStr = "";
         String chunkZStr = "";
-        String slashChunk = "";
         if (Config.INSTANCE.showChunkCoords) {
             chunkXStr = Integer.toString(Metrics.chunkX());
+            chunkYStr = Integer.toString(Metrics.chunkY());
             chunkZStr = Integer.toString(Metrics.chunkZ());
-            slashChunk = "/";
         }
         vars.put("chunk_x", chunkXStr);
+        vars.put("chunk_y", chunkYStr);
         vars.put("chunk_z", chunkZStr);
-        vars.put("slash_chunk", slashChunk);
 
         // Entity Count
         vars.put("entity_count", Config.INSTANCE.showEntityCount ? Integer.toString(Metrics.entityCount()) : "");
@@ -343,34 +360,323 @@ public class Hud {
         int originX = Config.INSTANCE.x;
         int originY = Config.INSTANCE.y;
         
-        if (Config.INSTANCE.moveMode) {
-            handleDrag(mc);
-            int hoverX = (int) mc.mouse.getX();
-            int hoverY = (int) mc.mouse.getY();
-            boolean mouseOverHud = hoverX >= originX && hoverX <= originX + (int)(maxW * Config.INSTANCE.scale) &&
-                                   hoverY >= originY && hoverY <= originY + (int)(parsedLines.size() * 11 * Config.INSTANCE.scale);
-            if (mouseOverHud && !dragging) {
-                context.fill(originX - 1, originY - 1, originX + (int)(maxW * Config.INSTANCE.scale) + 1, originY + (int)(parsedLines.size() * 11 * Config.INSTANCE.scale) + 1, 0x80FFFFFF);
+        int hudW = (int)(maxW * Config.INSTANCE.scale);
+        int hudH = (int)(parsedLines.size() * 11 * Config.INSTANCE.scale);
+        originX = Math.max(0, Math.min(originX, screenW - hudW));
+        originY = Math.max(0, Math.min(originY, screenH - hudH));
+        
+        renderHudTokens(context, tr, parsedLines, originX, originY, Hud.withFullAlpha(Config.INSTANCE.color), cpuC1, cpuC2, gpuC1, gpuC2);
+    }
+
+    public static void drawDirect(DrawContext context, TextRenderer tr) {
+        MinecraftClient mc = MinecraftClient.getInstance();
+        if (mc == null || mc.world == null) {
+            return;
+        }
+
+        HudTemplate.ensureDefault();
+        List<HudTemplate.Line> lines;
+        if (HudTemplate.lines().isEmpty()) {
+            HudTemplate.reload();
+        }
+        if ((lines = HudTemplate.lines()).isEmpty()) {
+            return;
+        }
+
+        String cpuNameRaw = Hud.safe(Metrics.cpuName(), "CPU");
+        String gpuNameRaw = Hud.safe(Metrics.gpuName(), "GPU");
+        int fpsVal = mc.getCurrentFps();
+        int cpuUseVal = Hud.clamp0_100(Math.round(Metrics.cpu()));
+        int gpuUseVal = Metrics.gpu();
+        int gpuTempVal = Metrics.gpuTemp();
+        int cpuTempVal = Metrics.cpuTemp();
+        String gpuVendor = Hud.detectGpuVendor(gpuNameRaw);
+        String cpuVendor = Hud.detectCpuVendor(cpuNameRaw);
+        boolean integrated = Hud.detectIntegratedGpu(gpuNameRaw);
+
+        int cpuC1 = CPU_RED;
+        int cpuC2 = CPU_ORANGE;
+        int gpuC1 = GPU_LIGHT_DEFAULT;
+        int gpuC2 = GPU_DARK_DEFAULT;
+
+        if (cpuVendor.equals("intel")) {
+            cpuC1 = INTEL_LIGHT;
+            cpuC2 = INTEL_DARK;
+        } else if (cpuVendor.equals("amd")) {
+            cpuC1 = AMD_LIGHT;
+            cpuC2 = AMD_DARK;
+        }
+
+        if (gpuVendor.equals("intel")) {
+            gpuC1 = INTEL_LIGHT;
+            gpuC2 = INTEL_DARK;
+        } else if (gpuVendor.equals("amd")) {
+            gpuC1 = AMD_LIGHT;
+            gpuC2 = AMD_DARK;
+        } else if (gpuVendor.equals("nvidia")) {
+            gpuC1 = NVIDIA_LIGHT;
+            gpuC2 = NVIDIA_DARK;
+        }
+
+        Map<String, String> vars = buildVars();
+        List<List<RenderToken>> parsedLines = new ArrayList<>();
+        int maxW = 0;
+        for (HudTemplate.Line l : lines) {
+            String raw = l.text();
+            List<RenderToken> tokens;
+            if (raw == null || (tokens = Hud.parseLine(raw, vars, cpuUseVal, gpuUseVal, gpuTempVal, cpuTempVal, fpsVal, Metrics.ping(), Metrics.tps(), Metrics.gameTime())).isEmpty()) continue;
+            int w = Hud.tokensWidth(tr, tokens);
+            if (w > maxW) {
+                maxW = w;
             }
-            if (dragging) {
-                context.fill(originX - 1, originY - 1, originX + (int)(maxW * Config.INSTANCE.scale) + 1, originY + (int)(parsedLines.size() * 11 * Config.INSTANCE.scale) + 1, 0x80FF0000);
+            parsedLines.add(tokens);
+        }
+        if (maxW <= 0 || parsedLines.isEmpty()) {
+            return;
+        }
+
+        renderHudTokens(context, tr, parsedLines, 0, 0, Hud.withFullAlpha(Config.INSTANCE.color), cpuC1, cpuC2, gpuC1, gpuC2);
+    }
+
+    private static Map<String, String> buildVars() {
+        Map<String, String> vars = new java.util.HashMap<>();
+        boolean cpuSectionEnabled = Config.INSTANCE.showCpu || Config.INSTANCE.showCpuTemp;
+        boolean gpuSectionEnabled = Config.INSTANCE.showGpu || Config.INSTANCE.showGpuTemp;
+        boolean fpsSectionEnabled = Config.INSTANCE.showFps;
+
+        vars.put("cpu_label", cpuSectionEnabled ? "CPU:" : "");
+        vars.put("gpu_label", gpuSectionEnabled ? "GPU:" : "");
+        vars.put("fps_label", fpsSectionEnabled ? "FPS:" : "");
+        
+        long ramTotalBytes = Metrics.ramTotal();
+        long vramTotalBytes = Metrics.vramTotal();
+        boolean memoryDataAvailable = ramTotalBytes > 0 || vramTotalBytes > 0;
+        vars.put("memory_label", Config.INSTANCE.showMemory && memoryDataAvailable ? "RAM:" : "");
+        vars.put("vram_label", Config.INSTANCE.showMemory && memoryDataAvailable ? "VRAM:" : "");
+        
+        vars.put("time_irl_label", Config.INSTANCE.showIrlTime ? "IRL:" : "");
+        vars.put("time_game_label", Config.INSTANCE.showGameTime ? "Game:" : "");
+        vars.put("ping_label", Config.INSTANCE.showPing ? "Ping:" : "");
+        vars.put("coords_label", Config.INSTANCE.showCoords ? "XYZ:" : "");
+        vars.put("biome_label", Config.INSTANCE.showBiome ? "Biome:" : "");
+        vars.put("chunk_label", Config.INSTANCE.showChunkCoords ? "Chunk XYZ:" : "");
+        vars.put("entity_label", Config.INSTANCE.showEntityCount ? "Entities:" : "");
+        vars.put("direction_label", Config.INSTANCE.showDirection ? "Dir:" : "");
+        vars.put("light_label", Config.INSTANCE.showLightLevel ? "Light:" : "");
+        vars.put("day_label", Config.INSTANCE.showInGameDay ? "Day:" : "");
+        vars.put("age_label", Config.INSTANCE.showWorldAge ? "Age:" : "");
+
+        vars.put("fps", Config.INSTANCE.showFps ? Integer.toString(MinecraftClient.getInstance().getCurrentFps()) : "");
+        vars.put("fps_1min", Config.INSTANCE.advancedFpsStats ? String.format("%.0f", Metrics.fps1Min()) : "");
+        vars.put("fps_5min", Config.INSTANCE.advancedFpsStats ? String.format("%.0f", Metrics.fps5Min()) : "");
+        vars.put("fps_15min", Config.INSTANCE.advancedFpsStats ? String.format("%.0f", Metrics.fps15Min()) : "");
+        vars.put("fps_1min_label", Config.INSTANCE.advancedFpsStats ? "1m:" : "");
+        vars.put("fps_5min_label", Config.INSTANCE.advancedFpsStats ? "5m:" : "");
+        vars.put("fps_15min_label", Config.INSTANCE.advancedFpsStats ? "15m:" : "");
+        vars.put("cpu_name", Config.INSTANCE.showCpuName ? Hud.safe(Metrics.cpuName(), "CPU") : "");
+        vars.put("cpu_vendor", Hud.detectCpuVendor(Hud.safe(Metrics.cpuName(), "CPU")));
+        String cpuUseStr = "";
+        String cpuUseUnitStr = "%";
+        if (Config.INSTANCE.showCpu) {
+            cpuUseStr = Integer.toString(Hud.clamp0_100(Math.round(Metrics.cpu())));
+        } else {
+            cpuUseUnitStr = "";
+        }
+        vars.put("cpu_use", cpuUseStr);
+        vars.put("cpu_use_unit", cpuUseUnitStr);
+        boolean gpuOn = Config.INSTANCE.showGpu;
+        vars.put("gpu_name", gpuOn && Config.INSTANCE.showGpuName ? Hud.safe(Metrics.gpuName(), "GPU") : "");
+        vars.put("gpu_vendor", Hud.detectGpuVendor(Hud.safe(Metrics.gpuName(), "GPU")));
+        String gpuUseStr = "";
+        String gpuUseUnitStr = "%";
+        int gpuUseVal = Metrics.gpu();
+        if (gpuOn && gpuUseVal >= 0) {
+            gpuUseStr = Integer.toString(Hud.clamp0_100(gpuUseVal));
+        } else {
+            gpuUseUnitStr = "";
+        }
+        vars.put("gpu_use", gpuUseStr);
+        vars.put("gpu_use_unit", gpuUseUnitStr);
+
+        String gpuTempStr = "";
+        String gpuTempUnit = "";
+        int gpuTempVal = Metrics.gpuTemp();
+        if (gpuOn && Config.INSTANCE.showGpuTemp && gpuTempVal >= 0) {
+            gpuTempStr = Integer.toString(gpuTempVal);
+            gpuTempUnit = "°C";
+        } else if (gpuOn && Config.INSTANCE.showGpuTemp) {
+            gpuTempUnit = "°C";
+        }
+        vars.put("gpu_temp", gpuTempStr);
+        vars.put("gpu_temp_unit", gpuTempUnit);
+        vars.put("gpu_integrated", Hud.detectIntegratedGpu(Hud.safe(Metrics.gpuName(), "GPU")) ? "(iGPU)" : "");
+        
+        String batteryStr = "";
+        String batteryCharging = "";
+        if (Config.INSTANCE.showBattery) {
+            BatteryInfo battery = getBatteryInfo();
+            if (battery.percent >= 0) {
+                batteryStr = battery.percent + "%";
+                batteryCharging = battery.charging ? "⚡" : "";
             }
         }
+        vars.put("battery", batteryStr);
+        vars.put("battery_charging", batteryCharging);
+        vars.put("bat_label", Config.INSTANCE.showBattery ? "Battery:" : "");
         
+        String cpuTempStr = "";
+        String cpuTempUnit = "";
+        int cpuTempVal = Metrics.cpuTemp();
+        if (Config.INSTANCE.showCpuTemp && cpuTempVal >= 0 && CpuTempMonitor.isSupported()) {
+            cpuTempStr = Integer.toString(cpuTempVal);
+            cpuTempUnit = "°C";
+        } else if (Config.INSTANCE.showCpuTemp && CpuTempMonitor.isSupported()) {
+            cpuTempUnit = "°C";
+        }
+        vars.put("cpu_temp", cpuTempStr);
+        vars.put("cpu_temp_unit", cpuTempUnit);
+
+        String ramStr = "";
+        String ramTotalStr = "";
+        String slashMem = "";
+        if (Config.INSTANCE.showMemory && Metrics.ramTotal() > 0) {
+            ramStr = formatBytes(Metrics.ramUsed());
+            ramTotalStr = formatBytes(Metrics.ramTotal());
+            slashMem = "/";
+        }
+        vars.put("ram_used", ramStr);
+        vars.put("ram_total", ramTotalStr);
+        vars.put("slash_mem", slashMem);
+
+        String vramStr = "";
+        String vramTotalStr = "";
+        String slashVram = "";
+        if (Config.INSTANCE.showMemory && Metrics.vramTotal() > 0) {
+            vramStr = formatBytes(Metrics.vramUsed());
+            vramTotalStr = formatBytes(Metrics.vramTotal());
+            slashVram = "/";
+        }
+        vars.put("vram_used", vramStr);
+        vars.put("vram_total", vramTotalStr);
+        vars.put("slash_vram", slashVram);
+
+        String irlTimeStr = "";
+        if (Config.INSTANCE.showIrlTime) {
+            irlTimeStr = formatTime(Metrics.irlTime(), Config.INSTANCE.timeFormat12Hour);
+        }
+        vars.put("irl_time", irlTimeStr);
+
+        String gameTimeStr = "";
+        if (Config.INSTANCE.showGameTime) {
+            gameTimeStr = formatGameTime(Metrics.gameTime());
+        }
+        vars.put("game_time", gameTimeStr);
+
+        String pingStr = "";
+        String pingUnit = "";
+        int pingVal = Metrics.ping();
+        if (Config.INSTANCE.showPing && pingVal >= 0) {
+            pingStr = Integer.toString(pingVal);
+            pingUnit = "ms";
+        } else if (Config.INSTANCE.showPing) {
+            pingUnit = "";
+        }
+        vars.put("ping", pingStr);
+        vars.put("ping_unit", pingUnit);
+        vars.put("ping_1min", Config.INSTANCE.advancedPingStats && Metrics.ping1Min() >= 0 ? String.format("%.0f", Metrics.ping1Min()) : "");
+        vars.put("ping_5min", Config.INSTANCE.advancedPingStats && Metrics.ping5Min() >= 0 ? String.format("%.0f", Metrics.ping5Min()) : "");
+        vars.put("ping_15min", Config.INSTANCE.advancedPingStats && Metrics.ping15Min() >= 0 ? String.format("%.0f", Metrics.ping15Min()) : "");
+        vars.put("ping_1min_label", Config.INSTANCE.advancedPingStats ? "1m:" : "");
+        vars.put("ping_5min_label", Config.INSTANCE.advancedPingStats ? "5m:" : "");
+        vars.put("ping_15min_label", Config.INSTANCE.advancedPingStats ? "15m:" : "");
+
+        String coordsX = "";
+        String coordsY = "";
+        String coordsZ = "";
+        if (Config.INSTANCE.showCoords) {
+            coordsX = String.format("%.1f", Metrics.posX());
+            coordsY = String.format("%.1f", Metrics.posY());
+            coordsZ = String.format("%.1f", Metrics.posZ());
+        }
+        vars.put("coords_x", coordsX);
+        vars.put("coords_y", coordsY);
+        vars.put("coords_z", coordsZ);
+
+        String tpsStr = "";
+        if (Config.INSTANCE.showTps) {
+            tpsStr = String.format("%.1f", Metrics.tps());
+        }
+        vars.put("tps", tpsStr);
+        vars.put("tps_label", Config.INSTANCE.showTps ? "TPS:" : "");
+        vars.put("tps_1min", Config.INSTANCE.advancedTpsStats ? String.format("%.1f", Metrics.tps1Min()) : "");
+        vars.put("tps_5min", Config.INSTANCE.advancedTpsStats ? String.format("%.1f", Metrics.tps5Min()) : "");
+        vars.put("tps_15min", Config.INSTANCE.advancedTpsStats ? String.format("%.1f", Metrics.tps15Min()) : "");
+        vars.put("tps_1min_label", Config.INSTANCE.advancedTpsStats ? "1m:" : "");
+        vars.put("tps_5min_label", Config.INSTANCE.advancedTpsStats ? "5m:" : "");
+        vars.put("tps_15min_label", Config.INSTANCE.advancedTpsStats ? "15m:" : "");
+
+        vars.put("biome", Config.INSTANCE.showBiome ? Metrics.biome() : "");
+
+        String chunkXStr = "";
+        String chunkYStr = "";
+        String chunkZStr = "";
+        if (Config.INSTANCE.showChunkCoords) {
+            chunkXStr = Integer.toString(Metrics.chunkX());
+            chunkYStr = Integer.toString(Metrics.chunkY());
+            chunkZStr = Integer.toString(Metrics.chunkZ());
+        }
+        vars.put("chunk_x", chunkXStr);
+        vars.put("chunk_y", chunkYStr);
+        vars.put("chunk_z", chunkZStr);
+
+        vars.put("entity_count", Config.INSTANCE.showEntityCount ? Integer.toString(Metrics.entityCount()) : "");
+        vars.put("direction", Config.INSTANCE.showDirection ? formatDirection(Metrics.direction()) : "");
+        vars.put("light_level", Config.INSTANCE.showLightLevel ? Integer.toString(Metrics.lightLevel()) : "");
+        vars.put("in_game_day", Config.INSTANCE.showInGameDay ? Long.toString(Metrics.inGameDay()) : "");
+
+        String worldAgeStr = "";
+        if (Config.INSTANCE.showWorldAge) {
+            long age = Metrics.worldAge();
+            long days = age / 24000L;
+            long hours = (age % 24000L) / 1000L;
+            worldAgeStr = String.format("%dd %dh", days, hours);
+        }
+        vars.put("world_age", worldAgeStr);
+
+        return vars;
+    }
+
+    private static void renderHudTokens(DrawContext context, TextRenderer tr, List<List<RenderToken>> parsedLines, int originX, int originY, int baseArgb, int cpuC1, int cpuC2, int gpuC1, int gpuC2) {
         Matrix3x2fStack m = context.getMatrices();
         m.pushMatrix();
         m.translate((float)originX, (float)originY);
         float sc = (float)Config.INSTANCE.scale;
         m.scale(sc, sc);
         int y = 0;
-        int baseArgb = Hud.withFullAlpha(Config.INSTANCE.color);
         for (List<RenderToken> list : parsedLines) {
             int x = 0;
             for (RenderToken t : list) {
                 if (t.text == null || t.text.isEmpty()) continue;
                 if (t.waved) {
                     boolean animOn;
-                    boolean bl = animOn = t.waveMode == WaveMode.FPS && Config.INSTANCE.animateFps || t.waveMode == WaveMode.CPU && Config.INSTANCE.animateCpuName || t.waveMode == WaveMode.GPU && Config.INSTANCE.animateGpuName;
+                    boolean bl = animOn = t.waveMode == WaveMode.FPS && Config.INSTANCE.animateFps
+                        || t.waveMode == WaveMode.CPU && Config.INSTANCE.animateCpuName
+                        || t.waveMode == WaveMode.GPU && Config.INSTANCE.animateGpuName
+                        || t.waveMode == WaveMode.BATTERY && Config.INSTANCE.animateBattery
+                        || t.waveMode == WaveMode.MEMORY && Config.INSTANCE.animateMemory
+                        || t.waveMode == WaveMode.VRAM && Config.INSTANCE.animateVram
+                        || t.waveMode == WaveMode.IRL_TIME && Config.INSTANCE.animateIrlTime
+                        || t.waveMode == WaveMode.GAME_TIME && Config.INSTANCE.animateGameTime
+                        || t.waveMode == WaveMode.PING && Config.INSTANCE.animatePing
+                        || t.waveMode == WaveMode.COORDS && Config.INSTANCE.animateCoords
+                        || t.waveMode == WaveMode.TPS && Config.INSTANCE.animateTps
+                        || t.waveMode == WaveMode.BIOME && Config.INSTANCE.animateBiome
+                        || t.waveMode == WaveMode.CHUNK && Config.INSTANCE.animateChunkCoords
+                        || t.waveMode == WaveMode.ENTITY && Config.INSTANCE.animateEntityCount
+                        || t.waveMode == WaveMode.DIRECTION && Config.INSTANCE.animateDirection
+                        || t.waveMode == WaveMode.LIGHT && Config.INSTANCE.animateLightLevel
+                        || t.waveMode == WaveMode.DAY && Config.INSTANCE.animateInGameDay
+                        || t.waveMode == WaveMode.AGE && Config.INSTANCE.animateWorldAge;
                     if (!animOn) {
                         x += Hud.drawPlainToken(context, tr, t, x, y, baseArgb);
                         continue;
@@ -382,9 +688,54 @@ public class Hud {
                     } else if (t.waveMode == WaveMode.CPU) {
                         c1 = cpuC1;
                         c2 = cpuC2;
-                    } else {
+                    } else if (t.waveMode == WaveMode.GPU) {
                         c1 = gpuC1;
                         c2 = gpuC2;
+                    } else if (t.waveMode == WaveMode.BATTERY) {
+                        c1 = BATTERY_C1;
+                        c2 = BATTERY_C2;
+                    } else if (t.waveMode == WaveMode.MEMORY) {
+                        c1 = MEMORY_C1;
+                        c2 = MEMORY_C2;
+                    } else if (t.waveMode == WaveMode.VRAM) {
+                        c1 = VRAM_C1;
+                        c2 = VRAM_C2;
+                    } else if (t.waveMode == WaveMode.IRL_TIME) {
+                        c1 = IRL_TIME_C1;
+                        c2 = IRL_TIME_C2;
+                    } else if (t.waveMode == WaveMode.GAME_TIME) {
+                        c1 = GAME_TIME_C1;
+                        c2 = GAME_TIME_C2;
+                    } else if (t.waveMode == WaveMode.PING) {
+                        c1 = PING_C1;
+                        c2 = PING_C2;
+                    } else if (t.waveMode == WaveMode.COORDS) {
+                        c1 = COORDS_C1;
+                        c2 = COORDS_C2;
+                    } else if (t.waveMode == WaveMode.TPS) {
+                        c1 = TPS_C1;
+                        c2 = TPS_C2;
+                    } else if (t.waveMode == WaveMode.BIOME) {
+                        c1 = BIOME_C1;
+                        c2 = BIOME_C2;
+                    } else if (t.waveMode == WaveMode.CHUNK) {
+                        c1 = CHUNK_C1;
+                        c2 = CHUNK_C2;
+                    } else if (t.waveMode == WaveMode.ENTITY) {
+                        c1 = ENTITY_C1;
+                        c2 = ENTITY_C2;
+                    } else if (t.waveMode == WaveMode.DIRECTION) {
+                        c1 = DIRECTION_C1;
+                        c2 = DIRECTION_C2;
+                    } else if (t.waveMode == WaveMode.LIGHT) {
+                        c1 = LIGHT_C1;
+                        c2 = LIGHT_C2;
+                    } else if (t.waveMode == WaveMode.DAY) {
+                        c1 = DAY_C1;
+                        c2 = DAY_C2;
+                    } else {
+                        c1 = AGE_C1;
+                        c2 = AGE_C2;
                     }
                     Hud.drawWaveText(context, tr, t.text, x, y, c1, c2);
                     x += tr.getWidth(t.text);
@@ -429,7 +780,27 @@ public class Hud {
             if (c == '@' && (wm = Hud.matchWave(template, i)) != null) {
                 Hud.flush(out, buf, style, waveMode);
                 waveMode = wm;
-                int adv = wm == WaveMode.CPU ? "@wave_cpu".length() : (wm == WaveMode.GPU ? "@wave_gpu".length() : "@wave_fps".length());
+                int adv = switch (wm) {
+                    case CPU -> "@wave_cpu".length();
+                    case GPU -> "@wave_gpu".length();
+                    case FPS -> "@wave_fps".length();
+                    case BATTERY -> "@wave_battery".length();
+                    case MEMORY -> "@wave_memory".length();
+                    case VRAM -> "@wave_vram".length();
+                    case IRL_TIME -> "@wave_irl_time".length();
+                    case GAME_TIME -> "@wave_game_time".length();
+                    case PING -> "@wave_ping".length();
+                    case COORDS -> "@wave_coords".length();
+                    case TPS -> "@wave_tps".length();
+                    case BIOME -> "@wave_biome".length();
+                    case CHUNK -> "@wave_chunk".length();
+                    case ENTITY -> "@wave_entity".length();
+                    case DIRECTION -> "@wave_direction".length();
+                    case LIGHT -> "@wave_light".length();
+                    case DAY -> "@wave_day".length();
+                    case AGE -> "@wave_age".length();
+                    default -> 0;
+                };
                 i += adv - 1;
                 continue;
             }
@@ -525,6 +896,9 @@ public class Hud {
                         } else if (key.equals("chunk_x") && Config.INSTANCE.colorizeCoords) {
                             tokenWaved = false;
                             tokenStyle = tokenStyle.withColor(Hud.coordXColor() & 0xFFFFFF);
+                        } else if (key.equals("chunk_y") && Config.INSTANCE.colorizeCoords) {
+                            tokenWaved = false;
+                            tokenStyle = tokenStyle.withColor(Hud.coordYColor() & 0xFFFFFF);
                         } else if (key.equals("chunk_z") && Config.INSTANCE.colorizeCoords) {
                             tokenWaved = false;
                             tokenStyle = tokenStyle.withColor(Hud.coordZColor() & 0xFFFFFF);
@@ -587,6 +961,51 @@ public class Hud {
         }
         if (s.regionMatches(at, "@wave_fps", 0, "@wave_fps".length())) {
             return WaveMode.FPS;
+        }
+        if (s.regionMatches(at, "@wave_battery", 0, "@wave_battery".length())) {
+            return WaveMode.BATTERY;
+        }
+        if (s.regionMatches(at, "@wave_memory", 0, "@wave_memory".length())) {
+            return WaveMode.MEMORY;
+        }
+        if (s.regionMatches(at, "@wave_vram", 0, "@wave_vram".length())) {
+            return WaveMode.VRAM;
+        }
+        if (s.regionMatches(at, "@wave_irl_time", 0, "@wave_irl_time".length())) {
+            return WaveMode.IRL_TIME;
+        }
+        if (s.regionMatches(at, "@wave_game_time", 0, "@wave_game_time".length())) {
+            return WaveMode.GAME_TIME;
+        }
+        if (s.regionMatches(at, "@wave_ping", 0, "@wave_ping".length())) {
+            return WaveMode.PING;
+        }
+        if (s.regionMatches(at, "@wave_coords", 0, "@wave_coords".length())) {
+            return WaveMode.COORDS;
+        }
+        if (s.regionMatches(at, "@wave_tps", 0, "@wave_tps".length())) {
+            return WaveMode.TPS;
+        }
+        if (s.regionMatches(at, "@wave_biome", 0, "@wave_biome".length())) {
+            return WaveMode.BIOME;
+        }
+        if (s.regionMatches(at, "@wave_chunk", 0, "@wave_chunk".length())) {
+            return WaveMode.CHUNK;
+        }
+        if (s.regionMatches(at, "@wave_entity", 0, "@wave_entity".length())) {
+            return WaveMode.ENTITY;
+        }
+        if (s.regionMatches(at, "@wave_direction", 0, "@wave_direction".length())) {
+            return WaveMode.DIRECTION;
+        }
+        if (s.regionMatches(at, "@wave_light", 0, "@wave_light".length())) {
+            return WaveMode.LIGHT;
+        }
+        if (s.regionMatches(at, "@wave_day", 0, "@wave_day".length())) {
+            return WaveMode.DAY;
+        }
+        if (s.regionMatches(at, "@wave_age", 0, "@wave_age".length())) {
+            return WaveMode.AGE;
         }
         return null;
     }
@@ -721,40 +1140,6 @@ public class Hud {
         if (c >= 75) return Hud.withFullAlpha(0xFF9500);
         if (c >= 60) return Hud.withFullAlpha(0xFFCC00);
         return Hud.withFullAlpha(0x34C759);
-    }
-
-    private static void handleDrag(MinecraftClient mc) {
-        long window = mc.getWindow().getHandle();
-        boolean mouseDown = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
-        int mouseX = (int)(mc.mouse.getX() / mc.getWindow().getScaleFactor());
-        int mouseY = (int)(mc.mouse.getY() / mc.getWindow().getScaleFactor());
-        
-        if (mouseDown && !wasMouseDown) {
-            int hudX = Config.INSTANCE.x;
-            int hudY = Config.INSTANCE.y;
-            int hudW = 200;
-            int hudH = 200;
-            if (mouseX >= hudX && mouseX <= hudX + hudW && mouseY >= hudY && mouseY <= hudY + hudH) {
-                dragging = true;
-                dragOffsetX = mouseX - hudX;
-                dragOffsetY = mouseY - hudY;
-            }
-        }
-        
-        if (!mouseDown) {
-            dragging = false;
-        }
-        
-        if (dragging && mouseDown) {
-            int newX = mouseX - dragOffsetX;
-            int newY = mouseY - dragOffsetY;
-            if (newX >= 0 && newY >= 0) {
-                Config.INSTANCE.x = newX;
-                Config.INSTANCE.y = newY;
-            }
-        }
-        
-        wasMouseDown = mouseDown;
     }
 
     private static String formatBytes(long bytes) {
@@ -914,6 +1299,21 @@ public class Hud {
         NONE,
         CPU,
         GPU,
-        FPS;
+        FPS,
+        BATTERY,
+        MEMORY,
+        VRAM,
+        IRL_TIME,
+        GAME_TIME,
+        PING,
+        COORDS,
+        TPS,
+        BIOME,
+        CHUNK,
+        ENTITY,
+        DIRECTION,
+        LIGHT,
+        DAY,
+        AGE
     }
 }
