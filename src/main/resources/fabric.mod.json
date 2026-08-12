@@ -4,8 +4,8 @@
   "version": "1.21.11",
   "name": "Many Utils",
   "description": "On-screen stats with Mod Menu settings.",
-  "authors": ["cutebow"],
-  "contributors": ["Logawinner"],
+  "authors": ["Logawinner"],
+  "contributors": ["cutebow"],
   "license": "MIT",
   "environment": "*",
   "icon": "assets/icon.png",
@@ -13,6 +13,7 @@
     "client": ["me.anchorhelper.many_utils.ManyUtils"],
     "modmenu": ["me.anchorhelper.many_utils.ModMenuIntegration"]
   },
+  "mixins": ["mixins.json"],
   "depends": {
     "fabricloader": ">=0.18.1",
     "minecraft": "1.21.11",

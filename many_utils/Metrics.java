@@ -87,6 +87,39 @@ public class Metrics {
     private record Sample(long time, float value) {
     }
 
+    private static final java.util.ArrayDeque<Long> leftClicks = new java.util.ArrayDeque<>();
+    private static final java.util.ArrayDeque<Long> rightClicks = new java.util.ArrayDeque<>();
+
+    public static void recordClick(boolean left) {
+        long now = System.currentTimeMillis();
+        if (left) {
+            leftClicks.addLast(now);
+        } else {
+            rightClicks.addLast(now);
+        }
+    }
+
+    public static float leftCps() {
+        return countClicks(leftClicks);
+    }
+
+    public static float rightCps() {
+        return countClicks(rightClicks);
+    }
+
+    public static float totalCps() {
+        return leftCps() + rightCps();
+    }
+
+    private static float countClicks(java.util.ArrayDeque<Long> deque) {
+        long now = System.currentTimeMillis();
+        long cutoff = now - 1000;
+        while (!deque.isEmpty() && deque.peekFirst() < cutoff) {
+            deque.pollFirst();
+        }
+        return deque.size();
+    }
+
     public static void start() {
         if (started) return;
         started = true;
