@@ -68,12 +68,13 @@ public class Metrics {
     private static final int MAX_FPS_SAMPLES = 1800;
     private static final Object FPS_LOCK = new Object();
 
-    private static volatile double tps = 20.0;
-    private static volatile float tps1Min = 20;
-    private static volatile float tps5Min = 20;
-    private static volatile float tps15Min = 20;
-    private static final java.util.Queue<Sample> tpsSamples = new java.util.ArrayDeque<>();
+    private static volatile double tps = 0;
+    private static volatile float tps1Min = 0;
+    private static volatile float tps5Min = 0;
+    private static volatile float tps15Min = 0;
+    private static final java.util.List<Sample> tpsSamples = new java.util.ArrayList<>();
     private static final Object TPS_LOCK = new Object();
+    private static final int MAX_TPS_SAMPLES = 1800;
     private static long lastGameTime = 0;
     private static long lastTpsSampleTime = System.nanoTime();
 
@@ -478,19 +479,19 @@ public class Metrics {
         try {
             MinecraftClient mc = MinecraftClient.getInstance();
             if (mc != null && mc.world != null) {
-                long currentGameTime = mc.world.getTimeOfDay();
+                long currentGameTime = mc.world.getTime();
                 long now = System.nanoTime();
                 if (lastGameTime > 0 && currentGameTime != lastGameTime) {
                     long timeDelta = now - lastTpsSampleTime;
                     long tickDelta = currentGameTime - lastGameTime;
                     if (timeDelta > 0 && tickDelta > 0) {
                         double seconds = (double) timeDelta / 1_000_000_000.0;
-                        tps = Math.min(20.0, tickDelta / seconds);
+                        tps = tickDelta / seconds;
                     }
                 }
                 lastGameTime = currentGameTime;
                 lastTpsSampleTime = now;
-                gameTime = currentGameTime;
+                gameTime = mc.world.getTimeOfDay();
             }
         } catch (Throwable ignored) {}
     }
@@ -593,34 +594,26 @@ public class Metrics {
         long now = System.nanoTime();
         synchronized (TPS_LOCK) {
             tpsSamples.add(new Sample(now, (float) tps));
-            while (!tpsSamples.isEmpty() && tpsSamples.peek().time() < now - TimeUnit.SECONDS.toNanos(15)) {
-                tpsSamples.poll();
+            while (tpsSamples.size() > MAX_TPS_SAMPLES) {
+                tpsSamples.remove(0);
             }
-            if (now - lastTpsSampleTime >= TimeUnit.MILLISECONDS.toNanos(500)) {
-                lastTpsSampleTime = now;
-                float oneMin = 0, fiveMin = 0, fifteenMin = 0;
-                int oneCount = 0, fiveCount = 0, fifteenCount = 0;
-                long oneMinAgo = now - TimeUnit.MINUTES.toNanos(1);
-                long fiveMinAgo = now - TimeUnit.MINUTES.toNanos(5);
-                long fifteenMinAgo = now - TimeUnit.MINUTES.toNanos(15);
-                for (Sample s : tpsSamples) {
-                    if (s.time() >= oneMinAgo) {
-                        oneMin += s.value();
-                        oneCount++;
-                    }
-                    if (s.time() >= fiveMinAgo) {
-                        fiveMin += s.value();
-                        fiveCount++;
-                    }
-                    if (s.time() >= fifteenMinAgo) {
-                        fifteenMin += s.value();
-                        fifteenCount++;
-                    }
-                }
-                tps1Min = oneCount > 0 ? oneMin / oneCount : 20;
-                tps5Min = fiveCount > 0 ? fiveMin / fiveCount : 20;
-                tps15Min = fifteenCount > 0 ? fifteenMin / fifteenCount : 20;
+            int size = tpsSamples.size();
+            int count1m = Math.min(120, size);
+            int count5m = Math.min(600, size);
+            int count15m = Math.min(1800, size);
+            float sum1m = 0, sum5m = 0, sum15m = 0;
+            for (int i = size - count1m; i < size; i++) {
+                sum1m += tpsSamples.get(i).value();
             }
+            for (int i = size - count5m; i < size; i++) {
+                sum5m += tpsSamples.get(i).value();
+            }
+            for (int i = size - count15m; i < size; i++) {
+                sum15m += tpsSamples.get(i).value();
+            }
+            tps1Min = count1m > 0 ? sum1m / count1m : 0;
+            tps5Min = count5m > 0 ? sum5m / count5m : 0;
+            tps15Min = count15m > 0 ? sum15m / count15m : 0;
         }
     }
 
