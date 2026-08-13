@@ -39,6 +39,7 @@ public class ManyUtilsConfigScreen {
         anim.addEntry(e.startBooleanToggle(Text.literal("Animate Light Level"), cfg.animateLightLevel).setSaveConsumer(v -> cfg.animateLightLevel = v).build());
         anim.addEntry(e.startBooleanToggle(Text.literal("Animate In-Game Day"), cfg.animateInGameDay).setSaveConsumer(v -> cfg.animateInGameDay = v).build());
         anim.addEntry(e.startBooleanToggle(Text.literal("Animate World Age"), cfg.animateWorldAge).setSaveConsumer(v -> cfg.animateWorldAge = v).build());
+        anim.addEntry(e.startBooleanToggle(Text.literal("Animate CPS"), cfg.animateCps).setSaveConsumer(v -> cfg.animateCps = v).build());
 
         ConfigCategory toggles = b.getOrCreateCategory(Text.literal("Toggles"));
         toggles.addEntry(e.startBooleanToggle(Text.literal("Show FPS"), cfg.showFps).setSaveConsumer(v -> cfg.showFps = v).build());
@@ -70,6 +71,7 @@ public class ManyUtilsConfigScreen {
         toggles.addEntry(e.startBooleanToggle(Text.literal("Show In-Game Day"), cfg.showInGameDay).setSaveConsumer(v -> cfg.showInGameDay = v).build());
         toggles.addEntry(e.startBooleanToggle(Text.literal("Show World Age"), cfg.showWorldAge).setSaveConsumer(v -> cfg.showWorldAge = v).build());
         toggles.addEntry(e.startBooleanToggle(Text.literal("Show Battery"), cfg.showBattery).setSaveConsumer(v -> cfg.showBattery = v).build());
+        toggles.addEntry(e.startBooleanToggle(Text.literal("Show CPS"), cfg.showCps).setSaveConsumer(v -> cfg.showCps = v).build());
         toggles.addEntry(e.startBooleanToggle(Text.literal("Text Shadow"), cfg.shadow).setSaveConsumer(v -> cfg.shadow = v).build());
 
         ConfigCategory colors = b.getOrCreateCategory(Text.literal("Colored Stats"));
@@ -91,6 +93,7 @@ public class ManyUtilsConfigScreen {
         colors.addEntry(e.startBooleanToggle(Text.literal("Colorize Direction"), cfg.colorizeDirection).setSaveConsumer(v -> cfg.colorizeDirection = v).build());
         colors.addEntry(e.startBooleanToggle(Text.literal("Colorize Entity Count"), cfg.colorizeEntityCount).setSaveConsumer(v -> cfg.colorizeEntityCount = v).build());
         colors.addEntry(e.startBooleanToggle(Text.literal("Colorize Light Level"), cfg.colorizeLightLevel).setSaveConsumer(v -> cfg.colorizeLightLevel = v).build());
+        colors.addEntry(e.startBooleanToggle(Text.literal("Colorize CPS"), cfg.colorizeCps).setSaveConsumer(v -> cfg.colorizeCps = v).build());
 
         ConfigCategory advanced = b.getOrCreateCategory(Text.literal("Advanced Stats"));
         advanced.addEntry(e.startBooleanToggle(Text.literal("Advanced FPS Stats (1/5/15 min)"), cfg.advancedFpsStats).setSaveConsumer(v -> cfg.advancedFpsStats = v).build());

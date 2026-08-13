@@ -27,9 +27,12 @@ public class Config {
     public boolean showDirection = false;
     public boolean showLightLevel = false;
     public boolean showInGameDay = false;
-    public boolean showWorldAge = false;
-    public boolean showBattery = false;
+public boolean showWorldAge = false;
+    public boolean showCps = false;
+    public boolean animateCps = false;
+    public boolean colorizeCps = true;
 
+    public boolean showBattery = false;
     public boolean advancedFpsStats = false;
     public boolean advancedPingStats = false;
     public boolean advancedTpsStats = false;

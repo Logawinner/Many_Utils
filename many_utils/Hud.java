@@ -46,6 +46,8 @@ public class Hud {
     private static final int COORDS_C2 = 0x00FF00;
     private static final int TPS_C1 = 0x00FF00;
     private static final int TPS_C2 = 0x0000FF;
+    private static final int CPS_C1 = FPS_GOLD;
+    private static final int CPS_C2 = FPS_YELLOW;
     private static final int BIOME_C1 = 0x00FF00;
     private static final int BIOME_C2 = 0xFF0000;
     private static final int CHUNK_C1 = 0xFF5555;
@@ -153,6 +155,16 @@ public class Hud {
         vars.put("fps_1min_label", Config.INSTANCE.advancedFpsStats ? "1m:" : "");
         vars.put("fps_5min_label", Config.INSTANCE.advancedFpsStats ? "5m:" : "");
         vars.put("fps_15min_label", Config.INSTANCE.advancedFpsStats ? "15m:" : "");
+
+        // CPS labels (shown only when Config.showCps is true)
+        boolean cpsEnabled = Config.INSTANCE.showCps;
+        vars.put("cps_label", cpsEnabled ? "CPS:" : "");
+        vars.put("cps", cpsEnabled ? String.format("%.0f", Metrics.totalCps()) : "");
+        vars.put("cps_l_label", cpsEnabled ? "L:" : "");
+        vars.put("cps_l", cpsEnabled ? Integer.toString((int) Math.round(Metrics.leftCps())) : "");
+        vars.put("cps_r_label", cpsEnabled ? "R:" : "");
+        vars.put("cps_r", cpsEnabled ? Integer.toString((int) Math.round(Metrics.rightCps())) : "");
+
         vars.put("cpu_name", Config.INSTANCE.showCpuName ? cpuNameRaw : "");
         vars.put("cpu_vendor", cpuVendor);
         String cpuUseStr = "";
@@ -676,7 +688,7 @@ public class Hud {
                         || t.waveMode == WaveMode.DIRECTION && Config.INSTANCE.animateDirection
                         || t.waveMode == WaveMode.LIGHT && Config.INSTANCE.animateLightLevel
                         || t.waveMode == WaveMode.DAY && Config.INSTANCE.animateInGameDay
-                        || t.waveMode == WaveMode.AGE && Config.INSTANCE.animateWorldAge;
+                        || t.waveMode == WaveMode.AGE && Config.INSTANCE.animateWorldAge || t.waveMode == WaveMode.CPS && Config.INSTANCE.animateCps;
                     if (!animOn) {
                         x += Hud.drawPlainToken(context, tr, t, x, y, baseArgb);
                         continue;
@@ -733,6 +745,9 @@ public class Hud {
                     } else if (t.waveMode == WaveMode.DAY) {
                         c1 = DAY_C1;
                         c2 = DAY_C2;
+                    } else if (t.waveMode == WaveMode.CPS) {
+                        c1 = CPS_C1;
+                        c2 = CPS_C2;
                     } else {
                         c1 = AGE_C1;
                         c2 = AGE_C2;
@@ -1314,6 +1329,7 @@ public class Hud {
         DIRECTION,
         LIGHT,
         DAY,
-        AGE
+        AGE,
+        CPS
     }
 }

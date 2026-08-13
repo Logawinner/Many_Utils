@@ -85,6 +85,9 @@ public class Metrics {
     private static final Object PING_LOCK = new Object();
     private static long lastPingSampleTime = System.nanoTime();
 
+    public static boolean prevLeftPressed = false;
+    public static boolean prevRightPressed = false;
+
     private record Sample(long time, float value) {
     }
 
