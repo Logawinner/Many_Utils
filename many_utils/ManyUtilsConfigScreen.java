@@ -108,9 +108,9 @@ public class ManyUtilsConfigScreen {
         display.addEntry(e.startBooleanToggle(Text.literal("Reposition HUD"), cfg.repositionMode).setSaveConsumer(v -> cfg.repositionMode = v).build());
 
         b.setSavingRunnable(() -> {
+            Config.save();
             if (cfg.repositionMode) {
                 cfg.repositionMode = false;
-                Config.save();
                 net.minecraft.client.MinecraftClient.getInstance().executeSync(() -> {
                     PositionScreen.open(null);
                 });

@@ -290,8 +290,8 @@ public class Hud {
         String coordsY = "";
         String coordsZ = "";
         if (Config.INSTANCE.showCoords) {
-            coordsX = String.format("%.1f", Metrics.posX());
-            coordsY = String.format("%.1f", Metrics.posY());
+            coordsX = String.format("%.1f", Metrics.posX()) + ", ";
+            coordsY = String.format("%.1f", Metrics.posY()) + ", ";
             coordsZ = String.format("%.1f", Metrics.posZ());
         }
         vars.put("coords_x", coordsX);
@@ -320,8 +320,8 @@ public class Hud {
         String chunkYStr = "";
         String chunkZStr = "";
         if (Config.INSTANCE.showChunkCoords) {
-            chunkXStr = Integer.toString(Metrics.chunkX());
-            chunkYStr = Integer.toString(Metrics.chunkY());
+            chunkXStr = Integer.toString(Metrics.chunkX()) + ", ";
+            chunkYStr = Integer.toString(Metrics.chunkY()) + ", ";
             chunkZStr = Integer.toString(Metrics.chunkZ());
         }
         vars.put("chunk_x", chunkXStr);
@@ -606,8 +606,8 @@ public class Hud {
         String coordsY = "";
         String coordsZ = "";
         if (Config.INSTANCE.showCoords) {
-            coordsX = String.format("%.1f", Metrics.posX());
-            coordsY = String.format("%.1f", Metrics.posY());
+            coordsX = String.format("%.1f", Metrics.posX()) + ", ";
+            coordsY = String.format("%.1f", Metrics.posY()) + ", ";
             coordsZ = String.format("%.1f", Metrics.posZ());
         }
         vars.put("coords_x", coordsX);
@@ -633,8 +633,8 @@ public class Hud {
         String chunkYStr = "";
         String chunkZStr = "";
         if (Config.INSTANCE.showChunkCoords) {
-            chunkXStr = Integer.toString(Metrics.chunkX());
-            chunkYStr = Integer.toString(Metrics.chunkY());
+            chunkXStr = Integer.toString(Metrics.chunkX()) + ", ";
+            chunkYStr = Integer.toString(Metrics.chunkY()) + ", ";
             chunkZStr = Integer.toString(Metrics.chunkZ());
         }
         vars.put("chunk_x", chunkXStr);
