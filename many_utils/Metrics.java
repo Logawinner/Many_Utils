@@ -632,6 +632,17 @@ public class Metrics {
         }
     }
 
+    public static void resetTps() {
+        synchronized (TPS_LOCK) {
+            tpsSamples.clear();
+            tps1Min = 0;
+            tps5Min = 0;
+            tps15Min = 0;
+            lastGameTime = 0;
+            lastTpsSampleTime = System.nanoTime();
+        }
+    }
+
     public static long ramTotal() { return ramTotal; }
     public static long ramUsed() { return ramUsed; }
     public static long vramTotal() { return vramTotal; }

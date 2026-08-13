@@ -46,8 +46,8 @@ public class Hud {
     private static final int COORDS_C2 = 0x00FF00;
     private static final int TPS_C1 = 0x00FF00;
     private static final int TPS_C2 = 0x0000FF;
-    private static final int CPS_C1 = FPS_GOLD;
-    private static final int CPS_C2 = FPS_YELLOW;
+    private static final int CPS_C1 = 0xFF69B4;
+    private static final int CPS_C2 = 0x00FFFF;
     private static final int BIOME_C1 = 0x00FF00;
     private static final int BIOME_C2 = 0xFF0000;
     private static final int CHUNK_C1 = 0xFF5555;
@@ -814,6 +814,7 @@ public class Hud {
                     case LIGHT -> "@wave_light".length();
                     case DAY -> "@wave_day".length();
                     case AGE -> "@wave_age".length();
+                    case CPS -> "@wave_cps".length();
                     default -> 0;
                 };
                 i += adv - 1;
@@ -932,6 +933,12 @@ public class Hud {
                                 double t = Double.parseDouble(value);
                                 tokenStyle = tokenStyle.withColor(Hud.tpsColor(t) & 0xFFFFFF);
                             } catch (Exception ignored) {}
+                        } else if ((key.equals("cps") || key.equals("cps_l") || key.equals("cps_r")) && Config.INSTANCE.colorizeCps) {
+                            tokenWaved = false;
+                            try {
+                                float cpsVal = Float.parseFloat(value);
+                                tokenStyle = tokenStyle.withColor(Hud.withFullAlpha(CPS_C1) & 0xFFFFFF);
+                            } catch (Exception ignored) {}
                         }
                     }
                     out.add(new RenderToken(value, tokenStyle, tokenWaved, waveMode));
@@ -1021,6 +1028,9 @@ public class Hud {
         }
         if (s.regionMatches(at, "@wave_age", 0, "@wave_age".length())) {
             return WaveMode.AGE;
+        }
+        if (s.regionMatches(at, "@wave_cps", 0, "@wave_cps".length())) {
+            return WaveMode.CPS;
         }
         return null;
     }

@@ -8,7 +8,7 @@
   "contributors": ["cutebow"],
   "license": "MIT",
   "environment": "*",
-  "icon": "assets/icon.png",
+  "icon": "assets/many_utils/icon.png",
   "entrypoints": {
     "client": ["me.anchorhelper.many_utils.ManyUtils"],
     "modmenu": ["me.anchorhelper.many_utils.ModMenuIntegration"]
