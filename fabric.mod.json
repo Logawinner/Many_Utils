@@ -7,7 +7,7 @@
   "authors": ["Logawinner", "cutebow"],
   "license": "MIT",
   "environment": "*",
-  "icon": "assets/many_utils/icon.png",
+  "icon": "assets/icon.png",
   "entrypoints": {
     "client": ["me.anchorhelper.many_utils.ManyUtils"],
     "modmenu": ["me.anchorhelper.many_utils.ModMenuIntegration"]
@@ -22,8 +22,8 @@
   "custom": {
     "modmenu": {
       "links": {
-        "modmenu.modrinth": "https://modrinth.com/user/cutebow",
-        "modmenu.discord": "https://discord.gg/A2Nx9kxDeB"
+        "modmenu.modrinth": "https://modrinth.com/mod/many-utils",
+        "modmenu.discord": "https://discord.gg/myPcsbpJkZ"
       }
     }
   }
