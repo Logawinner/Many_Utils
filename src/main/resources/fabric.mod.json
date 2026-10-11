@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "many_utils",
-  "version": "1.21.11",
+  "version": "26.3",
   "name": "Many Utils",
   "description": "On-screen stats with Mod Menu settings.",
   "authors": ["Logawinner"],
@@ -14,11 +14,11 @@
     "modmenu": ["me.anchorhelper.many_utils.ModMenuIntegration"]
   },
   "depends": {
-    "fabricloader": ">=0.18.1",
-    "minecraft": "1.21.11",
-    "fabric-api": ">=0.139.4+1.21.11",
-    "cloth-config2": ">=21.11.151",
-    "modmenu": ">=17.0.0-beta.1"
+    "fabricloader": ">=0.19.5",
+    "minecraft": "26.3",
+    "fabric-api": ">=0.162.0+26.3",
+    "cloth-config": ">=26.3.159",
+    "modmenu": ">=21.0.0"
   },
   "custom": {
     "modmenu": {

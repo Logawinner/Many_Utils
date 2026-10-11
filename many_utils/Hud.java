@@ -1,11 +1,11 @@
 package me.anchorhelper.many_utils;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 import org.joml.Matrix3x2fStack;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,7 +15,6 @@ import java.util.Objects;
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import org.lwjgl.glfw.GLFW;
 
 public class Hud {
     private static final int GPU_LIGHT_DEFAULT = 0x86EFAC;
@@ -65,12 +64,12 @@ public class Hud {
     private static final long WAVE_PERIOD_MS = 4000;
     private static final double PHASE_STEP = Math.PI / 10.0;
 
-    public static void draw(DrawContext context) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc == null || mc.world == null) {
+    public static void draw(GuiGraphicsExtractor context) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.level == null) {
             return;
         }
-        if (mc.options.hudHidden) {
+        if (mc.gui.hud.isHidden()) {
             return;
         }
 
@@ -83,10 +82,10 @@ public class Hud {
             return;
         }
 
-        TextRenderer tr = mc.textRenderer;
+        Font tr = mc.font;
         String cpuNameRaw = Hud.safe(Metrics.cpuName(), "CPU");
         String gpuNameRaw = Hud.safe(Metrics.gpuName(), "GPU");
-        int fpsVal = mc.getCurrentFps();
+        int fpsVal = mc.getFps();
         int cpuUseVal = Hud.clamp0_100(Math.round(Metrics.cpu()));
         int gpuUseVal = Metrics.gpu();
         int gpuTempVal = Metrics.gpuTemp();
@@ -366,8 +365,8 @@ public class Hud {
             return;
         }
 
-        int screenW = mc.getWindow().getScaledWidth();
-        int screenH = mc.getWindow().getScaledHeight();
+        int screenW = mc.getWindow().getGuiScaledWidth();
+        int screenH = mc.getWindow().getGuiScaledHeight();
         
         int originX = Config.INSTANCE.x;
         int originY = Config.INSTANCE.y;
@@ -380,9 +379,9 @@ public class Hud {
         renderHudTokens(context, tr, parsedLines, originX, originY, Hud.withFullAlpha(Config.INSTANCE.color), cpuC1, cpuC2, gpuC1, gpuC2);
     }
 
-    public static void drawDirect(DrawContext context, TextRenderer tr) {
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc == null || mc.world == null) {
+    public static void drawDirect(GuiGraphicsExtractor context, Font tr) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.level == null) {
             return;
         }
 
@@ -397,7 +396,7 @@ public class Hud {
 
         String cpuNameRaw = Hud.safe(Metrics.cpuName(), "CPU");
         String gpuNameRaw = Hud.safe(Metrics.gpuName(), "GPU");
-        int fpsVal = mc.getCurrentFps();
+        int fpsVal = mc.getFps();
         int cpuUseVal = Hud.clamp0_100(Math.round(Metrics.cpu()));
         int gpuUseVal = Metrics.gpu();
         int gpuTempVal = Metrics.gpuTemp();
@@ -478,7 +477,7 @@ public class Hud {
         vars.put("day_label", Config.INSTANCE.showInGameDay ? "Day:" : "");
         vars.put("age_label", Config.INSTANCE.showWorldAge ? "Age:" : "");
 
-        vars.put("fps", Config.INSTANCE.showFps ? Integer.toString(MinecraftClient.getInstance().getCurrentFps()) : "");
+        vars.put("fps", Config.INSTANCE.showFps ? Integer.toString(Minecraft.getInstance().getFps()) : "");
         vars.put("fps_1min", Config.INSTANCE.advancedFpsStats ? String.format("%.0f", Metrics.fps1Min()) : "");
         vars.put("fps_5min", Config.INSTANCE.advancedFpsStats ? String.format("%.0f", Metrics.fps5Min()) : "");
         vars.put("fps_15min", Config.INSTANCE.advancedFpsStats ? String.format("%.0f", Metrics.fps15Min()) : "");
@@ -658,8 +657,8 @@ public class Hud {
         return vars;
     }
 
-    private static void renderHudTokens(DrawContext context, TextRenderer tr, List<List<RenderToken>> parsedLines, int originX, int originY, int baseArgb, int cpuC1, int cpuC2, int gpuC1, int gpuC2) {
-        Matrix3x2fStack m = context.getMatrices();
+    private static void renderHudTokens(GuiGraphicsExtractor context, Font tr, List<List<RenderToken>> parsedLines, int originX, int originY, int baseArgb, int cpuC1, int cpuC2, int gpuC1, int gpuC2) {
+        Matrix3x2fStack m = context.pose();
         m.pushMatrix();
         m.translate((float)originX, (float)originY);
         float sc = (float)Config.INSTANCE.scale;
@@ -753,7 +752,7 @@ public class Hud {
                         c2 = AGE_C2;
                     }
                     Hud.drawWaveText(context, tr, t.text, x, y, c1, c2);
-                    x += tr.getWidth(t.text);
+                    x += tr.width(t.text);
                     continue;
                 }
                 x += Hud.drawPlainToken(context, tr, t, x, y, baseArgb);
@@ -764,14 +763,14 @@ public class Hud {
         m.popMatrix();
     }
 
-    private static int drawPlainToken(DrawContext context, TextRenderer tr, RenderToken t, int x, int y, int baseArgb) {
-        Text text = Text.literal(t.text).setStyle(t.style);
+    private static int drawPlainToken(GuiGraphicsExtractor context, Font tr, RenderToken t, int x, int y, int baseArgb) {
+        Component text = Component.literal(t.text).setStyle(t.style);
         if (Config.INSTANCE.shadow) {
-            context.drawTextWithShadow(tr, text, x, y, baseArgb);
+            context.text(tr, text, x, y, baseArgb, true);
         } else {
-            context.drawText(tr, text, x, y, baseArgb, false);
+            context.text(tr, text, x, y, baseArgb, false);
         }
-        return tr.getWidth(t.text);
+        return tr.width(t.text);
     }
 
     private static List<RenderToken> parseLine(String template, Map<String, String> vars, int cpuUse, int gpuUse, int gpuTemp, int cpuTemp, int fps, int ping, double tps, long gameTime) {
@@ -827,11 +826,11 @@ public class Hud {
                     i++;
                     continue;
                 }
-                Formatting f = Formatting.byCode(n);
+                ChatFormatting f = ChatFormatting.getByCode(n);
                 if (f != null) {
                     Hud.flush(out, buf, style, waveMode);
                     waveMode = WaveMode.NONE;
-                    style = style.isEmpty() ? style : (f == Formatting.RESET ? Style.EMPTY : style.withColor(f));
+                    style = style.isEmpty() ? style : (f == ChatFormatting.RESET ? Style.EMPTY : style.withColor(f));
                     i++;
                     continue;
                 }
@@ -960,7 +959,7 @@ public class Hud {
         if (style.getColor() == null) {
             return true;
         }
-        return (style.getColor().getRgb() & 0xFFFFFF) == (baseRgb & 0xFFFFFF);
+        return (style.getColor().getValue() & 0xFFFFFF) == (baseRgb & 0xFFFFFF);
     }
 
     private static String stripLineComment(String s) {
@@ -1056,11 +1055,11 @@ public class Hud {
         return sb.toString();
     }
 
-    private static int tokensWidth(TextRenderer tr, List<RenderToken> tokens) {
+    private static int tokensWidth(Font tr, List<RenderToken> tokens) {
         int w = 0;
         for (RenderToken t : tokens) {
             if (t.text == null || t.text.isEmpty()) continue;
-            w += tr.getWidth(t.text);
+            w += tr.width(t.text);
         }
         return w;
     }
@@ -1115,7 +1114,7 @@ public class Hud {
         return a.contains("radeon") && (a.contains("graphics") || a.contains("apu") || a.contains("vega"));
     }
 
-    private static void drawWaveText(DrawContext ctx, TextRenderer tr, String text, int x, int y, int c1, int c2) {
+    private static void drawWaveText(GuiGraphicsExtractor ctx, Font tr, String text, int x, int y, int c1, int c2) {
         if (text == null || text.isEmpty()) return;
         long t = System.currentTimeMillis();
         double base = (double)(t % WAVE_PERIOD_MS) / (double)WAVE_PERIOD_MS * Math.PI * 2.0;
@@ -1126,13 +1125,13 @@ public class Hud {
             String ch = new String(Character.toChars(cp));
             double s = (Math.sin(base + PHASE_STEP * (double)i) + 1.0) * 0.5;
             int col = Hud.withFullAlpha(Hud.lerpColor(c1, c2, s));
-            Text t1 = Text.literal(ch);
+            Component t1 = Component.literal(ch);
             if (Config.INSTANCE.shadow) {
-                ctx.drawTextWithShadow(tr, t1, x, y, col);
+                ctx.text(tr, t1, x, y, col, true);
             } else {
-                ctx.drawText(tr, t1, x, y, col, false);
+                ctx.text(tr, t1, x, y, col, false);
             }
-            x += tr.getWidth(ch);
+            x += tr.width(ch);
             off += Character.charCount(cp);
             i++;
         }

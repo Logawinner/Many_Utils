@@ -1,14 +1,14 @@
 plugins {
-    id 'fabric-loom' version '1.16-SNAPSHOT'
+    id 'net.fabricmc.fabric-loom' version '1.18-SNAPSHOT'
 }
 
 // Set Java version for the project
 java {
     toolchain {
-        languageVersion.set(JavaLanguageVersion.of(21))
+        languageVersion.set(JavaLanguageVersion.of(25))
     }
-    sourceCompatibility = JavaVersion.VERSION_21
-    targetCompatibility = JavaVersion.VERSION_21
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
 }
 
 // Add Maven repositories for dependencies
@@ -22,17 +22,16 @@ repositories {
 // Define dependencies
 dependencies {
     minecraft "com.mojang:minecraft:${minecraft_version}"
-    mappings "net.fabricmc:yarn:${yarn_mappings}:v2"
-    modImplementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
-    modCompileOnly "net.fabricmc:fabric-loader:${loader_version}"
-    
+    implementation "net.fabricmc:fabric-loader:${loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${fabric_version}"
+
     // Cloth Config for config screen
-    modApi("me.shedaniel.cloth:cloth-config-fabric:${cloth_config_version}") {
+    api("me.shedaniel.cloth:cloth-config-fabric:${cloth_config_version}") {
         exclude(group: "net.fabricmc.fabric-api", module: "fabric-api")
     }
-    
+
     // Mod Menu API for mod menu integration
-    modCompileOnly("com.terraformersmc:modmenu:${modmenu_version}")
+    compileOnly("com.terraformersmc:modmenu:${modmenu_version}")
 }
 
 // Set source directories to match existing project structure
@@ -49,5 +48,5 @@ sourceSets {
 
 // Set archive base name
 base {
-    archivesName = 'Many_Utils1.21.11'
+    archivesName = 'Many_Utils26.3'
 }

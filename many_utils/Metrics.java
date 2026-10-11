@@ -12,7 +12,7 @@ import java.util.Locale;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 public class Metrics {
     private static final OperatingSystemMXBean OS = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
@@ -480,9 +480,9 @@ public class Metrics {
     private static void sampleTime() {
         irlTime = System.currentTimeMillis();
         try {
-            MinecraftClient mc = MinecraftClient.getInstance();
-            if (mc != null && mc.world != null) {
-                long currentGameTime = mc.world.getTime();
+            Minecraft mc = Minecraft.getInstance();
+            if (mc != null && mc.level != null) {
+                long currentGameTime = mc.level.getGameTime();
                 long now = System.nanoTime();
                 if (lastGameTime > 0 && currentGameTime != lastGameTime) {
                     long timeDelta = now - lastTpsSampleTime;
@@ -494,32 +494,32 @@ public class Metrics {
                 }
                 lastGameTime = currentGameTime;
                 lastTpsSampleTime = now;
-                gameTime = mc.world.getTimeOfDay();
+                gameTime = mc.level.getOverworldClockTime();
             }
         } catch (Throwable ignored) {}
     }
 
     private static void samplePingAndCoords() {
         try {
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             if (mc != null && mc.player != null) {
-                ping = mc.getNetworkHandler().getPlayerListEntry(mc.player.getUuid()).getLatency();
+                ping = mc.getConnection().getPlayerInfo(mc.player.getUUID()).getLatency();
                 x = mc.player.getX();
                 y = mc.player.getY();
                 z = mc.player.getZ();
                 chunkX = ((int) Math.floor(x) % 16 + 16) % 16;
                 chunkY = ((int) Math.floor(y) % 16 + 16) % 16;
                 chunkZ = ((int) Math.floor(z) % 16 + 16) % 16;
-                direction = mc.player.getYaw();
-                lightLevel = mc.world.getLightLevel(mc.player.getBlockPos());
-                worldAge = mc.world.getTime();
+                direction = mc.player.getYRot();
+                lightLevel = mc.level.getMaxLocalRawBrightness(mc.player.blockPosition());
+                worldAge = mc.level.getGameTime();
                 inGameDay = worldAge / 24000L + 1L;
                 int count = 0;
-                for (net.minecraft.entity.Entity e : mc.world.getEntities()) {
+                for (net.minecraft.world.entity.Entity e : mc.level.entitiesForRendering()) {
                     count++;
                 }
                 entityCount = count;
-                String biomeId = mc.world.getBiome(mc.player.getBlockPos()).getKey().orElseThrow().getValue().toString();
+                String biomeId = mc.level.getBiome(mc.player.blockPosition()).unwrapKey().orElseThrow().identifier().toString();
                 biome = biomeId.contains("/") ? biomeId.substring(biomeId.lastIndexOf('/') + 1).replace("_", " ") : biomeId;
             }
         } catch (Throwable ignored) {}
@@ -528,9 +528,9 @@ public class Metrics {
     private static void sampleFps() {
         float currentFps = 0;
         try {
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             if (mc != null) {
-                currentFps = mc.getCurrentFps();
+                currentFps = mc.getFps();
             }
         } catch (Throwable ignored) {}
         synchronized (FPS_LOCK) {

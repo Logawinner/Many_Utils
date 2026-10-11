@@ -1,10 +1,10 @@
 package me.anchorhelper.many_utils;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.text.Text;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.network.chat.Component;
 
 public class PositionScreen extends Screen {
     private final Screen parent;
@@ -16,16 +16,16 @@ public class PositionScreen extends Screen {
     private boolean wasMouseDown = false;
 
     protected PositionScreen(Screen parent) {
-        super(Text.literal("Reposition HUD"));
+        super(Component.literal("Reposition HUD"));
         this.parent = parent;
     }
 
     public static void open(Screen parent) {
-        MinecraftClient mc = MinecraftClient.getInstance();
+        Minecraft mc = Minecraft.getInstance();
         PositionScreen screen = new PositionScreen(parent);
         screen.originalX = Config.INSTANCE.x;
         screen.originalY = Config.INSTANCE.y;
-        mc.setScreen(screen);
+        mc.setScreenAndShow(screen);
     }
 
     @Override
@@ -39,45 +39,45 @@ public class PositionScreen extends Screen {
         int startX = (screenW - totalW) / 2;
         int startY = screenH - btnH - 10;
 
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Save"), btn -> {
+        this.addRenderableWidget(Button.builder(Component.literal("Save"), btn -> {
             Config.save();
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             if (parent != null) {
-                mc.setScreen(parent);
+                mc.setScreenAndShow(parent);
             } else {
-                mc.setScreen(null);
+                mc.setScreenAndShow(null);
             }
-        }).dimensions(startX, startY, btnW, btnH).build());
+        }).bounds(startX, startY, btnW, btnH).build());
 
-        this.addDrawableChild(ButtonWidget.builder(Text.literal("Cancel"), btn -> {
+        this.addRenderableWidget(Button.builder(Component.literal("Cancel"), btn -> {
             Config.INSTANCE.x = originalX;
             Config.INSTANCE.y = originalY;
-            MinecraftClient mc = MinecraftClient.getInstance();
+            Minecraft mc = Minecraft.getInstance();
             if (parent != null) {
-                mc.setScreen(parent);
+                mc.setScreenAndShow(parent);
             } else {
-                mc.setScreen(null);
+                mc.setScreenAndShow(null);
             }
-        }).dimensions(startX + btnW + gap, startY, btnW, btnH).build());
+        }).bounds(startX + btnW + gap, startY, btnW, btnH).build());
     }
 
     @Override
-    public boolean mouseScrolled(double mouseX, double mouseY, double horizontal, double vertical) {
-        double delta = -vertical * 0.1;
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        double delta = -scrollY * 0.1;
         Config.INSTANCE.scale = Math.max(0.5, Math.min(4.0, Config.INSTANCE.scale + delta));
         return true;
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void extractRenderState(GuiGraphicsExtractor extractor, int mouseX, int mouseY, float delta) {
         int screenW = this.width;
         int screenH = this.height;
 
-        MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc != null && mc.world != null) {
-            long window = mc.getWindow().getHandle();
-            boolean mouseDown = org.lwjgl.glfw.GLFW.glfwGetMouseButton(window, org.lwjgl.glfw.GLFW.GLFW_MOUSE_BUTTON_LEFT) == org.lwjgl.glfw.GLFW.GLFW_PRESS;
-            
+        Minecraft mc = Minecraft.getInstance();
+        if (mc != null && mc.level != null) {
+            int mouseMask = org.lwjgl.sdl.SDLMouse.SDL_GetMouseState((java.nio.FloatBuffer) null, (java.nio.FloatBuffer) null);
+            boolean mouseDown = (mouseMask & org.lwjgl.sdl.SDLMouse.SDL_BUTTON_LMASK) != 0;
+
             if (mouseDown && !wasMouseDown) {
                 dragging = true;
                 dragOffsetX = mouseX - Config.INSTANCE.x;
@@ -94,14 +94,14 @@ public class PositionScreen extends Screen {
         }
 
         String note = "Scroll to rescale  |  Left Click + Drag to move";
-        int textWidth = mc.textRenderer.getWidth(note);
-        context.drawTextWithShadow(mc.textRenderer, Text.literal(note), screenW - textWidth - 2, 2, 0xFFFFFF);
+        int textWidth = mc.font.width(note);
+        extractor.text(mc.font, Component.literal(note), screenW - textWidth - 2, 2, 0xFFFFFFFF, true);
 
-        super.render(context, mouseX, mouseY, delta);
+        super.extractRenderState(extractor, mouseX, mouseY, delta);
     }
 
     @Override
-    public boolean shouldPause() {
+    public boolean isPauseScreen() {
         return false;
     }
 }

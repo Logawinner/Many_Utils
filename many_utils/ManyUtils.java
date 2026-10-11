@@ -3,28 +3,29 @@ package me.anchorhelper.many_utils;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-import org.lwjgl.glfw.GLFW;
-import net.minecraft.text.Text;
-import net.minecraft.client.MinecraftClient;
+import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
+import org.lwjgl.sdl.SDLMouse;
+import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
+import net.minecraft.client.Minecraft;
 
 public class ManyUtils implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         Config.load();
         Metrics.start();
-        HudRenderCallback.EVENT.register((context, tickDelta) -> Hud.draw(context));
+        HudElementRegistry.addLast(Identifier.fromNamespaceAndPath("many_utils", "hud"), (extractor, deltaTracker) -> Hud.draw(extractor));
         ClientPlayConnectionEvents.JOIN.register((handler, sender, client) -> {
             Metrics.resetFps();
             Metrics.resetTps();
             if (FirstRun.markIfFirst()) {
-                MinecraftClient mc = client;
+                Minecraft mc = client;
                 mc.execute(() -> {
                     if (mc.player != null) {
-                        mc.player.sendMessage(Text.literal("Gpu Cpu Util"), false);
-                        mc.player.sendMessage(Text.literal("Open the settings in Mod Menu to change things."), false);
-                        mc.player.sendMessage(Text.literal("Without Shaders - recommended no animations"), false);
-                        mc.player.sendMessage(Text.literal("With Shaders - It doesn't matter, either one is fine"), false);
+                        mc.player.sendSystemMessage(Component.literal("Gpu Cpu Util"));
+                        mc.player.sendSystemMessage(Component.literal("Open the settings in Mod Menu to change things."));
+                        mc.player.sendSystemMessage(Component.literal("Without Shaders - recommended no animations"));
+                        mc.player.sendSystemMessage(Component.literal("With Shaders - It doesn't matter, either one is fine"));
                     }
                 });
             }
@@ -32,11 +33,11 @@ public class ManyUtils implements ClientModInitializer {
         TestCommands.register();
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (client == null) return;
-            MinecraftClient mc = client;
-            if (mc == null || mc.world == null) return;
-            long window = mc.getWindow().getHandle();
-            boolean leftPressed = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
-            boolean rightPressed = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_RIGHT) == GLFW.GLFW_PRESS;
+            Minecraft mc = client;
+            if (mc == null || mc.level == null) return;
+            int mouseMask = SDLMouse.SDL_GetMouseState((java.nio.FloatBuffer) null, (java.nio.FloatBuffer) null);
+            boolean leftPressed = (mouseMask & SDLMouse.SDL_BUTTON_LMASK) != 0;
+            boolean rightPressed = (mouseMask & SDLMouse.SDL_BUTTON_RMASK) != 0;
             if (leftPressed && !Metrics.prevLeftPressed) {
                 Metrics.recordClick(true);
             }
